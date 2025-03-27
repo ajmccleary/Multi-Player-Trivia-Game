@@ -1,3 +1,2 @@
 serverip serverportnum
-client1ip client1portnum
-client2ip client2portnum
+127.0.0.1 8002

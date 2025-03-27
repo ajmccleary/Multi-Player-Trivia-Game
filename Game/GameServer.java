@@ -17,9 +17,10 @@ public class GameServer {
     private static ExecutorService executorService;
     
     //instance variables
-    
+    private int questionNumber = 0;
+
     //constructor method
-    public GameServer() {        
+    public GameServer () {        
         try (Scanner fileInput = new Scanner(inFile)) { //initialize scanner
             //munch first line
             fileInput.nextLine();
@@ -51,13 +52,23 @@ public class GameServer {
     }
 
     //send question thread method (uses TCP)
-    public void sendQuestion(Node client) {
+    public void sendQuestions (Node client) {
+        //while thread not shut down
         //blast question and question data to all clients on network
     }
 
     //detect when clients attempt to connect, create new thread per client
     public void listenThread() {
-        executorService.submit(() -> sendQuestion(clients.get("received ip:portnum")));
+        //receive prcoess store data from client attempting to connect
+
+        //create a new thread with the client's information to send questions to client
+        executorService.submit(() -> sendQuestions(clients.get("received ip:portnum")));
+    }
+
+    //monitor buzzer from all clients (UDP)
+    public void buzzerHandler() {
+        //while question is not next
+
     }
 
     //main
@@ -66,6 +77,14 @@ public class GameServer {
 
         executorService = Executors.newFixedThreadPool(10);
 
-        
+        executorService.submit(() -> gs.listenThread());
+
+
+        while (gs.questionNumber <= 20) {
+
+            gs.questionNumber++;
+        }
+
+        //trip shutdown flag
     }
 }
