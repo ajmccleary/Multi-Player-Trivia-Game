@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.concurrent.*;
 
 public class GameServer {
     //static variables
@@ -13,7 +14,8 @@ public class GameServer {
     private static HashMap<String,Node> clients = new HashMap<String, Node>();
 	private static File inFile = new File("ipConfig.txt");
     private static String nextLine;
-
+    private static ExecutorService executorService;
+    
     //instance variables
     
     //constructor method
@@ -48,13 +50,22 @@ public class GameServer {
         }
     }
 
-    //send question method (uses TCP)
-    public void sendQuestion() {
+    //send question thread method (uses TCP)
+    public void sendQuestion(Node client) {
         //blast question and question data to all clients on network
+    }
+
+    //detect when clients attempt to connect, create new thread per client
+    public void listenThread() {
+        executorService.submit(() -> sendQuestion(clients.get("received ip:portnum")));
     }
 
     //main
     public static void main (String args[]) {
         GameServer gs = new GameServer();
+
+        executorService = Executors.newFixedThreadPool(10);
+
+        
     }
 }
