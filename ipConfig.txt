@@ -1,0 +1,3 @@
+serverip serverportnum
+client1ip client1portnum
+client2ip client2portnum

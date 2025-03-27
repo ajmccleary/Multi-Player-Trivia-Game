@@ -1,4 +1,4 @@
-package project2;
+package game;
 
 import java.awt.Color;
 import java.awt.event.ActionEvent;

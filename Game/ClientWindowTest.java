@@ -1,4 +1,4 @@
-package project2;
+package game;
 
 public class ClientWindowTest
 {
