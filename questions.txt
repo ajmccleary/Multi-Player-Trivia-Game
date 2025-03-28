@@ -1,1 +1,2 @@
-triva question answer1 answer2 answer3 answer4 correctanswer
+Who was the first avenger? | Iron Man | Captain Marvel | Captain America | Thor
+Which of the following is a mutant? | Spiderman | Scarlet Witch | Black Bolt | Mr. Fantastic
