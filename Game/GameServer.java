@@ -12,7 +12,7 @@ public class GameServer {
     private static DatagramSocket socket; //server socket
     private static int portNum;
     private static HashMap<String,Node> clients = new HashMap<String, Node>();
-	private static File inFile = new File("ipConfig.txt");
+	private static File inFile;
     private static String nextLine;
     private static ExecutorService executorService;
     
@@ -20,7 +20,10 @@ public class GameServer {
     private int questionNumber = 0;
 
     //constructor method
-    public GameServer () {        
+    public GameServer () {
+        //declare inFile
+        inFile = new File("ipConfig.txt");
+        
         try (Scanner fileInput = new Scanner(inFile)) { //initialize scanner
             //munch first line
             fileInput.nextLine();
@@ -79,8 +82,9 @@ public class GameServer {
 
         executorService.submit(() -> gs.listenThread());
 
-
+        //gameplay loop
         while (gs.questionNumber <= 20) {
+            //game logic
 
             gs.questionNumber++;
         }
