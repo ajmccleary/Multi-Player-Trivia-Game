@@ -104,7 +104,7 @@ public class GameServer {
         File questionFile = new File("questions.txt");
         try (Scanner fileScan = new Scanner(questionFile)) {
             while (fileScan.hasNextLine()) {
-                String[] parts = fileScan.nextLine().split("\\|");
+                String[] parts = fileScan.nextLine().split(" \\| ");
 
                 questions[index] = parts[0];
                 for (int i = 1; i <= 4; i++) {
@@ -124,6 +124,7 @@ public class GameServer {
             for (int j = 0; j < 4; j++) {
                 System.out.println("Option " + (j + 1) + ": " + options.get(j + (i * 4)));
             }
+            System.out.println();
         }
 
 
