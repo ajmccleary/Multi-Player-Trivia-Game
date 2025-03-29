@@ -2,34 +2,39 @@ package game;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class GameServer {
     //static variables
-    private static DatagramSocket socket; //server socket
+    private static GameServer gs;
     private static int portNum;
-    private static HashMap<String,Node> clients = new HashMap<String, Node>();
+    private static DatagramSocket buzzerSocket; //UDP buzzer socket
+    private static ServerSocket gameSocket;
 	private static File inFile;
     private static String nextLine;
-    private static ExecutorService executorService;
     
     //instance variables
+    private ExecutorService executorService;
+    private Queue<Node> buzzerQueue = new LinkedList<Node>();
+    private HashMap<String,Node> clients = new HashMap<String, Node>();
     private int questionNumber = 0;
-
-
+    private boolean shutdownFlag = false;
+    
+    
     //constructor method
     public GameServer() {
         //declare inFile
         inFile = new File("ipConfig.txt");
         
         try (Scanner fileInput = new Scanner(inFile)) { //initialize scanner
-            //munch first line
-            fileInput.nextLine();
+            //read first line
+            nextLine = fileInput.nextLine();
+
+            //store port number
+            GameServer.portNum = Integer.parseInt(nextLine.split(" ")[1]);
 
             //scan through file
             do {
@@ -40,7 +45,7 @@ public class GameServer {
                 Node newNode = new Node(nextLine.split(" ")[0], Integer.parseInt(nextLine.split(" ")[1]));
                 
                 //add newly created client to hashMap
-                clients.put(newNode.getID(), newNode);
+                this.clients.put(newNode.getID(), newNode);
 
             } while (fileInput.hasNextLine());
         } catch (FileNotFoundException e) { //catch potential error thrown by scanner
@@ -48,11 +53,18 @@ public class GameServer {
             System.exit(1);
         }
 
-        //connect to specified socket
+        //connect to specified socket for UDP and TCP connections
         try {
-            GameServer.socket = new DatagramSocket(GameServer.portNum);
+            //port num 8000 for buzzer
+            GameServer.buzzerSocket = new DatagramSocket(GameServer.portNum - 1);
+
+            //port num 8001 for game
+            GameServer.gameSocket = new ServerSocket(GameServer.portNum + 1);
         } catch (SocketException e) {
-            System.out.println("Failed to create socket. Reason " + e.getMessage());
+            System.out.println("Failed to create UDP socket. Reason " + e.getMessage());
+            System.exit(1);
+        } catch (IOException e) {
+            System.out.println("Failed to create TCP socket. Reason " + e.getMessage());
             System.exit(1);
         }
     }
@@ -61,6 +73,20 @@ public class GameServer {
     public void sendQuestions (Node client) {
         //while thread not shut down
         //blast question and question data to all clients on network
+
+        //buzzer socket test, code beneath is temporary
+        DatagramSocket test;
+        try {
+            test = new DatagramSocket(8002);
+            DatagramPacket buzz = new DatagramPacket(new byte[1024], 1024, InetAddress.getByName("127.0.0.1"), portNum - 1);
+            test.send(buzz);
+        } catch (SocketException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+        }
     }
 
     //detect when clients attempt to connect, create new thread per client
@@ -68,17 +94,33 @@ public class GameServer {
         //receive prcoess store data from client attempting to connect
 
         //create a new thread with the client's information to send questions to client
-        executorService.submit(() -> sendQuestions(clients.get("received ip:portnum")));
+        gs.executorService.submit(() -> gs.sendQuestions(gs.clients.get("127.0.0.1:8000")));
     }
 
     //monitor buzzer from all clients (UDP)
     public void buzzerHandler() {
-        //while question is not next
+        while (!shutdownFlag) {
+            //initialize reply packet
+            byte[] replyData = new byte[1024];
+            DatagramPacket replyPacket = new DatagramPacket(replyData, replyData.length);
 
+            //use UDP socket
+            try {
+                buzzerSocket.receive(replyPacket);
+            } catch (IOException e) {
+                System.out.println("Failed to connect socket. Reason " + e.getMessage());
+            }
+
+            //add replies to queue in order received
+            gs.buzzerQueue.add(clients.get(replyPacket.getAddress().getHostAddress() + ":" + replyPacket.getPort()));
+
+            //pop from queue to pick player to answer
+            System.out.println(gs.buzzerQueue.remove().getID()); //printing rn change to logic to let player answer question
+        }
     }
 
     //main
-    public static void main (String args[]) {
+    public static void main (String args[]) { //hi zak (and not fahim) - jjguy
         System.out.println("Game Server Starting...");
 
         // Getting size of config file
@@ -127,18 +169,26 @@ public class GameServer {
             System.out.println();
         }
 
+        GameServer.gs = new GameServer();
 
-        GameServer gs = new GameServer();
+        gs.executorService = Executors.newFixedThreadPool(5);
+        gs.executorService.submit(() -> gs.buzzerHandler());
 
-        executorService = Executors.newFixedThreadPool(10);
+        System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
-        executorService.submit(() -> gs.listenThread());
-
+        gs.executorService.submit(() -> gs.listenThread());
+        
+        
         //gameplay loop
         while (gs.questionNumber <= 20) {
             //game logic
 
-            gs.questionNumber++;
+            //if question has progressed, increment
+            //base on timer
+            //gs.questionNumber++;
         }
+
+        //if questions complete
+        gs.shutdownFlag = true;
     }
 }
