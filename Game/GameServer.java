@@ -169,12 +169,14 @@ public class GameServer {
             System.out.println();
         }
 
+        //initialize game server object
         GameServer.gs = new GameServer();
 
+        //initialize thread pool
         gs.executorService = Executors.newFixedThreadPool(5);
-        gs.executorService.submit(() -> gs.buzzerHandler());
 
-        System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        //run threads
+        gs.executorService.submit(() -> gs.buzzerHandler());
 
         gs.executorService.submit(() -> gs.listenThread());
         
