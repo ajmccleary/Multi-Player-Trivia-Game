@@ -12,7 +12,7 @@ public class GameServer {
     private static GameServer gs;
     private static int portNum;
     private static DatagramSocket buzzerSocket; //UDP buzzer socket
-    private static ServerSocket gameSocket;
+    private static ServerSocket gameSocket; //TCP game socket
     
     //instance variables
     private ExecutorService executorService;
@@ -61,10 +61,19 @@ public class GameServer {
 
     //detect when clients attempt to connect, create new thread per client
     public void listenThread() {
-        //receive prcoess store data from client attempting to connect
+        //receive prcoess and store data from client attempting to connect
+        try {
+            Socket clientSocket = gameSocket.accept();
 
-        //create a new thread with the client's information to send questions to client
-        gs.executorService.submit(() -> gs.sendQuestions(gs.clients.get("127.0.0.1:8000")));
+            String clientIP = clientSocket.getInetAddress().getHostAddress();
+            int clientPort = clientSocket.getPort();
+
+            //create a new thread with the client's information to send questions to client
+            gs.executorService.submit(() -> gs.sendQuestions(clientIP + " " + clientPort));
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     //monitor buzzer from all clients (UDP)
