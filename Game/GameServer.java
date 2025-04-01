@@ -13,53 +13,23 @@ public class GameServer {
     private static int portNum;
     private static DatagramSocket buzzerSocket; //UDP buzzer socket
     private static ServerSocket gameSocket;
-	private static File inFile;
-    private static String nextLine;
     
     //instance variables
     private ExecutorService executorService;
-    private Queue<Node> buzzerQueue = new LinkedList<Node>();
-    private HashMap<String,Node> clients = new HashMap<String, Node>();
+    private Queue<String> buzzerQueue = new LinkedList<String>();
+    private HashMap<Integer,String> clients = new HashMap<Integer,String>();
     private int questionNumber = 0;
     private boolean shutdownFlag = false;
     
-    
     //constructor method
     public GameServer() {
-        //declare inFile
-        inFile = new File("ipConfig.txt");
-        
-        try (Scanner fileInput = new Scanner(inFile)) { //initialize scanner
-            //read first line
-            nextLine = fileInput.nextLine();
-
-            //store port number
-            GameServer.portNum = Integer.parseInt(nextLine.split(" ")[1]);
-
-            //scan through file
-            do {
-                //store next line input
-                nextLine = fileInput.nextLine();
-
-                //parse input and store in new node
-                Node newNode = new Node(nextLine.split(" ")[0], Integer.parseInt(nextLine.split(" ")[1]));
-                
-                //add newly created client to hashMap
-                this.clients.put(newNode.getID(), newNode);
-
-            } while (fileInput.hasNextLine());
-        } catch (FileNotFoundException e) { //catch potential error thrown by scanner
-			System.out.println("ipConfig.txt not found in root directory. Exiting program");
-            System.exit(1);
-        }
-
         //connect to specified socket for UDP and TCP connections
         try {
             //port num 8000 for buzzer
-            GameServer.buzzerSocket = new DatagramSocket(GameServer.portNum - 1);
+            GameServer.buzzerSocket = new DatagramSocket(8000);
 
             //port num 8001 for game
-            GameServer.gameSocket = new ServerSocket(GameServer.portNum + 1);
+            GameServer.gameSocket = new ServerSocket(8001);
         } catch (SocketException e) {
             System.out.println("Failed to create UDP socket. Reason " + e.getMessage());
             System.exit(1);
@@ -70,7 +40,7 @@ public class GameServer {
     }
 
     //send question thread method (uses TCP)
-    public void sendQuestions (Node client) {
+    public void sendQuestions (String client) {
         //while thread not shut down
         //blast question and question data to all clients on network
 
@@ -115,7 +85,7 @@ public class GameServer {
             gs.buzzerQueue.add(clients.get(replyPacket.getAddress().getHostAddress() + ":" + replyPacket.getPort()));
 
             //pop from queue to pick player to answer
-            System.out.println(gs.buzzerQueue.remove().getID()); //printing rn change to logic to let player answer question
+            System.out.println(gs.buzzerQueue.remove()); //printing rn change to logic to let player answer question
         }
     }
 
