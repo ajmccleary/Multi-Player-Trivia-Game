@@ -17,7 +17,7 @@ public class GameServer {
     //instance variables
     private ExecutorService executorService;
     private Queue<String> buzzerQueue = new LinkedList<String>();
-    private HashMap<Integer,String> clients = new HashMap<Integer,String>();
+    private HashMap<String, Integer> clients = new HashMap<String, Integer>();
     private int questionNumber = 0;
     private boolean shutdownFlag = false;
     
@@ -44,35 +44,24 @@ public class GameServer {
         //while thread not shut down
         //blast question and question data to all clients on network
 
-        //buzzer socket test, code beneath is temporary
-        DatagramSocket test;
-        try {
-            test = new DatagramSocket(8002);
-            DatagramPacket buzz = new DatagramPacket(new byte[1024], 1024, InetAddress.getByName("127.0.0.1"), portNum - 1);
-            test.send(buzz);
-        } catch (SocketException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-        }
     }
 
     //detect when clients attempt to connect, create new thread per client
     public void listenThread() {
-        //receive prcoess and store data from client attempting to connect
-        try {
-            Socket clientSocket = gameSocket.accept();
+        while (!gs.shutdownFlag) {
+            //receive prcoess and store data from client attempting to connect
+            try {
+                Socket clientSocket = gameSocket.accept();
 
-            String clientIP = clientSocket.getInetAddress().getHostAddress();
-            int clientPort = clientSocket.getPort();
+                String clientIP = clientSocket.getInetAddress().getHostAddress();
+                int clientPort = clientSocket.getPort();
 
-            //create a new thread with the client's information to send questions to client
-            gs.executorService.submit(() -> gs.sendQuestions(clientIP + " " + clientPort));
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+                //create a new thread with the client's information to send questions to client
+                gs.executorService.submit(() -> gs.sendQuestions(clientIP + " " + clientPort));
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
     }
 
@@ -91,7 +80,7 @@ public class GameServer {
             }
 
             //add replies to queue in order received
-            gs.buzzerQueue.add(clients.get(replyPacket.getAddress().getHostAddress() + ":" + replyPacket.getPort()));
+            gs.buzzerQueue.add(replyPacket.getAddress().getHostAddress() + ":" + replyPacket.getPort());
 
             //pop from queue to pick player to answer
             System.out.println(gs.buzzerQueue.remove()); //printing rn change to logic to let player answer question
@@ -158,8 +147,7 @@ public class GameServer {
         gs.executorService.submit(() -> gs.buzzerHandler());
 
         gs.executorService.submit(() -> gs.listenThread());
-        
-        
+
         //gameplay loop
         while (gs.questionNumber <= 20) {
             //game logic
