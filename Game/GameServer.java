@@ -17,6 +17,7 @@ public class GameServer {
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
     private HashMap<String, Integer> clients = new HashMap<String, Integer>();
     private int questionNumber = 0;
+    private String[] questions;
     private boolean shutdownFlag = false;
     
     //constructor method
@@ -43,7 +44,7 @@ public class GameServer {
         //periodically blast question and question data to client
         try (OutputStream out = clientSocket.getOutputStream()) {
             while (!gs.shutdownFlag) {
-                out.write(1); // either send packet or an object with serializable
+                out.write(1);
             }
         } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -91,9 +92,12 @@ public class GameServer {
             System.out.println(gs.buzzerQueue.poll()); //printing rn change to logic to let player answer question
         }
     }
-
+    
     //main
     public static void main (String args[]) { //hi zak (and not fahim) - jjguy
+        //initialize game server object
+        GameServer.gs = new GameServer();
+
         System.out.println("Game Server Starting...");
 
         // Getting size of config file
@@ -110,7 +114,7 @@ public class GameServer {
         }
 
         // Create an array to hold the questions
-        String[] questions = new String[size]; 
+        gs.questions = new String[size]; 
         // String[] options = new String[4];
 
         List<String> options = new ArrayList<>();
@@ -121,7 +125,7 @@ public class GameServer {
             while (fileScan.hasNextLine()) {
                 String[] parts = fileScan.nextLine().split(" \\| ");
 
-                questions[index] = parts[0];
+                gs.questions[index] = parts[0];
                 for (int i = 1; i <= 4; i++) {
                     // options[i - 1] = parts[i];
 
@@ -134,16 +138,14 @@ public class GameServer {
             System.exit(1);
         }
 
-        for (int i = 0; i < questions.length; i++) {
-            System.out.println("Question " + (i + 1) + ": " + questions[i]);
+        for (int i = 0; i < gs.questions.length; i++) {
+            System.out.println("Question " + (i + 1) + ": " + gs.questions[i]);
             for (int j = 0; j < 4; j++) {
                 System.out.println("Option " + (j + 1) + ": " + options.get(j + (i * 4)));
             }
             System.out.println();
         }
 
-        //initialize game server object
-        GameServer.gs = new GameServer();
 
         //initialize thread pool
         gs.executorService = Executors.newFixedThreadPool(5);
