@@ -1,8 +1,6 @@
 package game;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -10,13 +8,13 @@ import java.util.concurrent.*;
 public class GameServer {
     //static variables
     private static GameServer gs;
-    private static int portNum;
+    private static int portNum = 8001;
     private static DatagramSocket buzzerSocket; //UDP buzzer socket
     private static ServerSocket gameSocket; //TCP game socket
     
     //instance variables
     private ExecutorService executorService;
-    private Queue<String> buzzerQueue = new LinkedList<String>();
+    private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
     private HashMap<String, Integer> clients = new HashMap<String, Integer>();
     private int questionNumber = 0;
     private boolean shutdownFlag = false;
@@ -26,10 +24,11 @@ public class GameServer {
         //connect to specified socket for UDP and TCP connections
         try {
             //port num 8000 for buzzer
-            GameServer.buzzerSocket = new DatagramSocket(8000);
+            GameServer.buzzerSocket = new DatagramSocket(portNum - 1);
 
             //port num 8001 for game
-            GameServer.gameSocket = new ServerSocket(8001);
+            GameServer.gameSocket = new ServerSocket(portNum);
+
         } catch (SocketException e) {
             System.out.println("Failed to create UDP socket. Reason " + e.getMessage());
             System.exit(1);
@@ -40,10 +39,16 @@ public class GameServer {
     }
 
     //send question thread method (uses TCP)
-    public void sendQuestions (String client) {
-        //while thread not shut down
-        //blast question and question data to all clients on network
-
+    public void clientThread (Socket clientSocket) {
+        //periodically blast question and question data to client
+        try (OutputStream out = clientSocket.getOutputStream()) {
+            while (!gs.shutdownFlag) {
+                out.write(1); // either send packet or an object with serializable
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     //detect when clients attempt to connect, create new thread per client
@@ -52,12 +57,12 @@ public class GameServer {
             //receive prcoess and store data from client attempting to connect
             try {
                 Socket clientSocket = gameSocket.accept();
-
+                
                 String clientIP = clientSocket.getInetAddress().getHostAddress();
                 int clientPort = clientSocket.getPort();
 
                 //create a new thread with the client's information to send questions to client
-                gs.executorService.submit(() -> gs.sendQuestions(clientIP + " " + clientPort));
+                gs.executorService.submit(() -> gs.clientThread(clientSocket));
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -82,8 +87,8 @@ public class GameServer {
             //add replies to queue in order received
             gs.buzzerQueue.add(replyPacket.getAddress().getHostAddress() + ":" + replyPacket.getPort());
 
-            //pop from queue to pick player to answer
-            System.out.println(gs.buzzerQueue.remove()); //printing rn change to logic to let player answer question
+            //pop from queue to pick player to answer - TO DO
+            System.out.println(gs.buzzerQueue.poll()); //printing rn change to logic to let player answer question
         }
     }
 
