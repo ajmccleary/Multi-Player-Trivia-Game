@@ -23,6 +23,12 @@ public class GameClient {
 
             writer = new PrintWriter(socket.getOutputStream(), true);
             writer.println("fr");
+
+            //make in
+            //receive packet
+            //process it
+            //break it down
+            //print the questions as one line and each option line by line 
             
             try {
                 Thread.sleep(10000);
