@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class GameServer {
-    // static variables
+    //static variables
     private static GameServer gs;
     private static int portNum = 8001;
     private static DatagramSocket buzzerSocket; //UDP buzzer socket
