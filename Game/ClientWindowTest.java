@@ -4,6 +4,7 @@ public class ClientWindowTest
 {
 	public static void main(String[] args)
 	{
-		ClientWindow window = new ClientWindow();
+		
+	 new ClientWindow("127.0.0.1", 8001);
 	}
 }
