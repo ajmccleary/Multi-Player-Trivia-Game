@@ -15,10 +15,10 @@ public class GameServer {
     //instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private HashMap<String, Integer> clients = new HashMap<String, Integer>();
+    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); //QUESTION - is this fine for ClientID requirment?
     private int questionNumber = 0;
     private String[] questions;
-    private boolean shutdownFlag = false;
+    private boolean shutdownFlag, timerEndedFlag = false;
     
     //constructor method
     public GameServer() {
@@ -37,30 +37,98 @@ public class GameServer {
             System.out.println("Failed to create TCP socket. Reason " + e.getMessage());
             System.exit(1);
         }
+
+        // Getting size of config file
+        File configFile = new File("questions.txt");
+        int size = 0;
+        try (Scanner fileScan = new Scanner(configFile)) {
+            while (fileScan.hasNextLine()) {
+                size++;
+                fileScan.nextLine();
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("questions.txt not found in root directory. Exiting program");
+            System.exit(1);
+        }
+
+        // Create an array to hold the questions
+        gs.questions = new String[size]; 
+
+        List<String> options = new ArrayList<>();
+
+        int index = 0;
+        File questionFile = new File("questions.txt");
+        try (Scanner fileScan = new Scanner(questionFile)) {
+            while (fileScan.hasNextLine()) {
+                String[] parts = fileScan.nextLine().split(" \\| ");
+
+                gs.questions[index] = parts[0];
+                for (int i = 1; i <= 4; i++) {
+                    // options[i - 1] = parts[i];
+
+                    options.add(parts[i]);
+                }
+                index++;
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("questions.txt not found in root directory. Exiting program");
+            System.exit(1);
+        }
     }
 
     //send question thread method (uses TCP)
     public void clientThread (Socket clientSocket) {
+        //store clientID
+        String clientID = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+
         //periodically blast question and question data to client
         try (OutputStream out = clientSocket.getOutputStream()) {
             while (!gs.shutdownFlag) {
                 out.write(1);
+
+                //if question timer ends
+                if (gs.timerEndedFlag) {
+                    synchronized (gs.buzzerQueue) {
+                        //check if top of queue equals client ID
+                        if (gs.buzzerQueue.peek().equals(clientID)) {
+                            //send ack message to winner
+                            out.write("ack".getBytes());
+                            
+                            //remove winner from queue - DEV actually do the logic for letting them answer here/receiving the answer here
+                            gs.buzzerQueue.poll(); 
+                        } else { //client not on top of queue
+                            //send negative ack message
+                            out.write("negative-ack".getBytes());
+                        }
+                    }
+                }
             }
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            //print error
+            System.err.println("Communication error with client " + clientID + ": " + e.getMessage());
+
+            //remove client from queue upon disconnect
+            gs.buzzerQueue.remove(clientID);
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                System.err.println("Error closing client socket: " + e.getMessage());
+            }
         }
     }
-
+    
     //detect when clients attempt to connect, create new thread per client
     public void listenThread() {
         while (!gs.shutdownFlag) {
-            //receive prcoess and store data from client attempting to connect
             try {
+                //receive prcoess and store data from client attempting to connect
                 Socket clientSocket = gameSocket.accept();
-                
                 String clientIP = clientSocket.getInetAddress().getHostAddress();
                 int clientPort = clientSocket.getPort();
+
+                //initialize score to 0 (value) and tie to clientID (key)
+                clients.put(clientIP + ":" + clientPort, 0);
 
                 //create a new thread with the client's information to send questions to client
                 gs.executorService.submit(() -> gs.clientThread(clientSocket));
@@ -88,64 +156,17 @@ public class GameServer {
             //add replies to queue in order received
             gs.buzzerQueue.add(replyPacket.getAddress().getHostAddress() + ":" + replyPacket.getPort());
 
-            //pop from queue to pick player to answer - TO DO
-            System.out.println(gs.buzzerQueue.poll()); //printing rn change to logic to let player answer question
+            //queue is then handled in seperate thread clientThread
         }
     }
     
     //main
     public static void main (String args[]) { //hi zak (and not fahim) - jjguy
-        //initialize game server object
-        GameServer.gs = new GameServer();
-
+        //print start message
         System.out.println("Game Server Starting...");
 
-        // Getting size of config file
-        File configFile = new File("questions.txt");
-        int size = 0;
-        try (Scanner fileScan = new Scanner(configFile)) {
-            while (fileScan.hasNextLine()) {
-                size++;
-                fileScan.nextLine();
-            }
-        } catch (FileNotFoundException e) {
-            System.out.println("questions.txt not found in root directory. Exiting program");
-            System.exit(1);
-        }
-
-        // Create an array to hold the questions
-        gs.questions = new String[size]; 
-        // String[] options = new String[4];
-
-        List<String> options = new ArrayList<>();
-
-        int index = 0;
-        File questionFile = new File("questions.txt");
-        try (Scanner fileScan = new Scanner(questionFile)) {
-            while (fileScan.hasNextLine()) {
-                String[] parts = fileScan.nextLine().split(" \\| ");
-
-                gs.questions[index] = parts[0];
-                for (int i = 1; i <= 4; i++) {
-                    // options[i - 1] = parts[i];
-
-                    options.add(parts[i]);
-                }
-                index++;
-            }
-        } catch (FileNotFoundException e) {
-            System.out.println("questions.txt not found in root directory. Exiting program");
-            System.exit(1);
-        }
-
-        for (int i = 0; i < gs.questions.length; i++) {
-            System.out.println("Question " + (i + 1) + ": " + gs.questions[i]);
-            for (int j = 0; j < 4; j++) {
-                System.out.println("Option " + (j + 1) + ": " + options.get(j + (i * 4)));
-            }
-            System.out.println();
-        }
-
+        //initialize game server object
+        GameServer.gs = new GameServer();
 
         //initialize thread pool
         gs.executorService = Executors.newFixedThreadPool(5);
