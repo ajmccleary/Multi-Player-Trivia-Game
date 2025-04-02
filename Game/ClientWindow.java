@@ -7,12 +7,20 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.SecureRandom;
 import java.util.TimerTask;
+import java.util.Scanner;
 import java.util.Timer;
 import javax.swing.*;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
 
 public class ClientWindow implements ActionListener {
 	private JButton poll;
@@ -131,41 +139,70 @@ public class ClientWindow implements ActionListener {
 
 		// input refers to the radio button you selected or button you clicked
 		String input = e.getActionCommand();
+		File file = new File("ipConfig.txt");
+		Scanner fileScanner = null;
+		try {
+			fileScanner = new Scanner(file);
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		String[] parts = fileScanner.nextLine().split(" "); // read the first line and split by whitespace
+		String serverIP = parts[0]; 
+		int serverPort = Integer.parseInt(parts[1]); 
 		switch (input) {
-			case "Option 1": // Your code here
+			case "Option 1":
+
 				break;
-			case "Option 2": // Your code here
+
+			case "Option 2": 
+
 				break;
-			case "Option 3": // Your code here
+
+			case "Option 3": 
+
 				break;
-			case "Option 4": // Your code here
+
+			case "Option 4": 
+
 				break;
+
 			case "Poll":
-				 	out.println("Poll");	//Send poll action to the server
+				try {
+					String message = "buzz";
+					byte[] data = message.getBytes();
+					DatagramSocket socket = new DatagramSocket(1001);
+					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort);
+					socket.send(packet);
+					System.out.println( "Buzz pressed, sending message to server...");
+					socket.close();
+				} catch (SocketException socketException) {
+					System.out.println("Error in creating DatagramSocket: " + socketException.getMessage());
+					return;
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				break;
-			case "Submit":
-					for(JRadioButton option : options){
-						if(option.isSelected()){
-							out.println("Submit" + option.getText());	// Sends selected answer to the server
-							break;
-						}
-					}
+
+			case "Submit": 
+
 				break;
+
 			default:
 				System.out.println("Incorrect Option");
 		}
 
 		// test code below to demo enable/disable components
 		// DELETE THE CODE BELOW FROM HERE***
-		// if (poll.isEnabled()) {
-		// 	poll.setEnabled(false);
-		// 	submit.setEnabled(true);
-		// } else {
-		// 	poll.setEnabled(true);
-		// 	submit.setEnabled(false);
-		// }
+		if (poll.isEnabled()) {
+			poll.setEnabled(false);
+			submit.setEnabled(true);
+		} else {
+			poll.setEnabled(true);
+			submit.setEnabled(false);
+		}
 
-		// question.setText("Q2. This is another test problem " + random.nextInt());
+		question.setText("Q2. This is another test problem " + random.nextInt());
 
 		// you can also enable disable radio buttons
 		// options[random.nextInt(4)].setEnabled(false);
