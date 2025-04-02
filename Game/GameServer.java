@@ -16,7 +16,7 @@ public class GameServer {
     //instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); //QUESTION - is this fine for ClientID requirment?
+    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); //ASK - is this fine for ClientID requirment?
     private int questionNumber = 0;
     private boolean shutdownFlag, timerEndedFlag = false;
     
@@ -33,6 +33,7 @@ public class GameServer {
         } catch (SocketException e) {
             System.out.println("Failed to create UDP socket. Reason " + e.getMessage());
             System.exit(1);
+
         } catch (IOException e) {
             System.out.println("Failed to create TCP socket. Reason " + e.getMessage());
             System.exit(1);
@@ -82,7 +83,8 @@ public class GameServer {
         String clientID = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
 
         //periodically blast question and question data to client
-        try (OutputStream out = clientSocket.getOutputStream()) {
+        try (OutputStream out = clientSocket.getOutputStream();
+            InputStream in = clientSocket.getInputStream()) {
             while (!gs.shutdownFlag) {
                 out.write(1);
 
@@ -96,6 +98,38 @@ public class GameServer {
                             
                             //remove winner from queue - DEV actually do the logic for letting them answer here/receiving the answer here
                             gs.buzzerQueue.poll(); 
+
+                            //initialize holder for winner response
+                            byte[] response = new byte[1024];
+
+                            //timer runs ten seconds - ASK is this fine
+                            Thread.sleep(10000);
+
+                            //get value of current score
+                            int currentScore = clients.get(clientID);
+
+                            //if no response received
+                            if (in.read(response) == -1)
+                                //decrement currentScore
+                                currentScore -= 20;
+
+                            else if (response.toString().equals("correctAnswer")) { //DEV implement this
+                                //send "correct" message to client
+                                out.write("correct".getBytes());
+
+                                //increment currentScore
+                                currentScore += 10;
+                            } else {
+                                //send "wrong" message to client
+                                out.write("wrong".getBytes());
+
+                                //decrement currentScore
+                                currentScore -= 10;
+                            }
+
+                            //update current score
+                            clients.put(clientID, currentScore);
+
                         } else { //client not on top of queue
                             //send negative ack message
                             out.write("negative-ack".getBytes());
@@ -109,6 +143,11 @@ public class GameServer {
 
             //remove client from queue upon disconnect
             gs.buzzerQueue.remove(clientID);
+
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+
         } finally {
             try {
                 clientSocket.close();
