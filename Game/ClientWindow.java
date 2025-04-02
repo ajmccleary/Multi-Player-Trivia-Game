@@ -23,6 +23,7 @@ public class ClientWindow implements ActionListener {
 	private JLabel timer;
 	private JLabel score;
 	private TimerTask clock;
+	
 
 	private JFrame window;
 

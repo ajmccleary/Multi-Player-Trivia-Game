@@ -114,7 +114,19 @@ public class GameServer {
             InputStream in = clientSocket.getInputStream()) {
             while (!gs.shutdownFlag) {
                 out.write(1);
-
+                   
+                    //Send each question and its options to the client
+                    for(int i = 0; i< questions.length; i++){
+                        StringBuilder questionData = new StringBuilder(questions[i]);
+                        for(int j = 0; j < 4; j++){
+                            questionData.append(";").append(options.get(j + (i * 4)));
+                            System.out.println("The fuck");
+                        }
+                        // Sends the questions and options
+                        out.println(questionData.toString());
+                        Thread.sleep(20000);    // wait 20 seconds before sending the next question
+                    }
+               
                 //if question timer ends
                 if (gs.timerEndedFlag) {
                     synchronized (gs.buzzerQueue) {
