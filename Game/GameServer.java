@@ -11,7 +11,8 @@ public class GameServer {
     private static int portNum = 8001;
     private static DatagramSocket buzzerSocket; //UDP buzzer socket
     private static ServerSocket gameSocket; //TCP game socket
-    private static String[] questions;
+    private static String[] questions; //20 questions
+    private static List<String> options, answers; //options is four per questions, answers is one per question
     
     //instance variables
     private ExecutorService executorService;
@@ -52,10 +53,14 @@ public class GameServer {
             System.exit(1);
         }
 
-        // Create an array to hold the questions
-        questions = new String[size]; 
+        // initialize array to hold questions
+        questions = new String[size];
 
-        List<String> options = new ArrayList<>();
+        //initialize options to hold all options
+        options = new ArrayList<>();
+
+        //initialize answers to hold all answers
+        answers = new ArrayList<>();
 
         int index = 0;
         File questionFile = new File("questions.txt");
@@ -64,16 +69,38 @@ public class GameServer {
                 String[] parts = fileScan.nextLine().split(" \\| ");
 
                 questions[index] = parts[0];
-                for (int i = 1; i <= 4; i++) {
-                    // options[i - 1] = parts[i];
-
-                    options.add(parts[i]);
+                for (int i = 1; i <= 5; i++) {
+                    if (i <= 4)
+                        options.add(parts[i]);
+                    else
+                        answers.add(parts[i]);
                 }
                 index++;
             }
         } catch (FileNotFoundException e) {
             System.out.println("questions.txt not found in root directory. Exiting program");
             System.exit(1);
+        }
+    }
+
+    //detect when clients attempt to connect, create new thread per client
+    public void listenThread() {
+        while (!gs.shutdownFlag) {
+            try {
+                //receive prcoess and store data from client attempting to connect
+                Socket clientSocket = gameSocket.accept();
+                String clientIP = clientSocket.getInetAddress().getHostAddress();
+                int clientPort = clientSocket.getPort();
+
+                //initialize score to 0 (value) and tie to clientID (key)
+                clients.put(clientIP + ":" + clientPort, 0);
+
+                //create a new thread with the client's information to send questions to client
+                gs.executorService.submit(() -> gs.clientThread(clientSocket));
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
     }
 
@@ -96,13 +123,13 @@ public class GameServer {
                             //send ack message to winner
                             out.write("ack".getBytes());
                             
-                            //remove winner from queue - DEV actually do the logic for letting them answer here/receiving the answer here
+                            //remove winner from queue
                             gs.buzzerQueue.poll(); 
 
                             //initialize holder for winner response
                             byte[] response = new byte[1024];
 
-                            //timer runs ten seconds - ASK is this fine
+                            //timer runs ten seconds - ASK is this fine for timer
                             Thread.sleep(10000);
 
                             //get value of current score
@@ -113,18 +140,25 @@ public class GameServer {
                                 //decrement currentScore
                                 currentScore -= 20;
 
-                            else if (response.toString().equals("correctAnswer")) { //DEV implement this
+                            //if client answer received is equal to the correct answer stored for the current question
+                            else if (new String(response).equals(answers.get(questionNumber))) {
                                 //send "correct" message to client
                                 out.write("correct".getBytes());
 
                                 //increment currentScore
                                 currentScore += 10;
+
+                                //reset timerEndedFlag to false
+                                gs.timerEndedFlag = false;
                             } else {
                                 //send "wrong" message to client
                                 out.write("wrong".getBytes());
 
                                 //decrement currentScore
                                 currentScore -= 10;
+
+                                //trip flag to pop from queue again
+                                
                             }
 
                             //update current score
@@ -142,6 +176,7 @@ public class GameServer {
             System.err.println("Communication error with client " + clientID + ": " + e.getMessage());
 
             //remove client from queue upon disconnect
+            
             gs.buzzerQueue.remove(clientID);
 
         } catch (InterruptedException e) {
@@ -153,27 +188,6 @@ public class GameServer {
                 clientSocket.close();
             } catch (IOException e) {
                 System.err.println("Error closing client socket: " + e.getMessage());
-            }
-        }
-    }
-    
-    //detect when clients attempt to connect, create new thread per client
-    public void listenThread() {
-        while (!gs.shutdownFlag) {
-            try {
-                //receive prcoess and store data from client attempting to connect
-                Socket clientSocket = gameSocket.accept();
-                String clientIP = clientSocket.getInetAddress().getHostAddress();
-                int clientPort = clientSocket.getPort();
-
-                //initialize score to 0 (value) and tie to clientID (key)
-                clients.put(clientIP + ":" + clientPort, 0);
-
-                //create a new thread with the client's information to send questions to client
-                gs.executorService.submit(() -> gs.clientThread(clientSocket));
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
             }
         }
     }
