@@ -11,13 +11,13 @@ public class GameServer {
     private static int portNum = 8001;
     private static DatagramSocket buzzerSocket; //UDP buzzer socket
     private static ServerSocket gameSocket; //TCP game socket
+    private static String[] questions;
     
     //instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
     private HashMap<String, Integer> clients = new HashMap<String, Integer>(); //QUESTION - is this fine for ClientID requirment?
     private int questionNumber = 0;
-    private String[] questions;
     private boolean shutdownFlag, timerEndedFlag = false;
     
     //constructor method
@@ -52,7 +52,7 @@ public class GameServer {
         }
 
         // Create an array to hold the questions
-        gs.questions = new String[size]; 
+        questions = new String[size]; 
 
         List<String> options = new ArrayList<>();
 
@@ -62,7 +62,7 @@ public class GameServer {
             while (fileScan.hasNextLine()) {
                 String[] parts = fileScan.nextLine().split(" \\| ");
 
-                gs.questions[index] = parts[0];
+                questions[index] = parts[0];
                 for (int i = 1; i <= 4; i++) {
                     // options[i - 1] = parts[i];
 
