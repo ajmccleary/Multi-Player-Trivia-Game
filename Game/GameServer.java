@@ -192,8 +192,8 @@ public class GameServer {
         }
     }
 
-    // monitor buzzer from all clients (UDP)
-    public void buzzerHandler() {
+    //monitor buzzer from all clients (UDP)
+    public void UDPThread() {
         while (!shutdownFlag) {
             // initialize reply packet
             byte[] replyData = new byte[1024];
@@ -224,8 +224,8 @@ public class GameServer {
         //initialize thread pool
         gs.executorService = Executors.newFixedThreadPool(5);
 
-        // run threads
-        gs.executorService.submit(() -> gs.buzzerHandler());
+        //run threads
+        gs.executorService.submit(() -> gs.UDPThread());
 
         gs.executorService.submit(() -> gs.listenThread());
 
@@ -233,9 +233,9 @@ public class GameServer {
         while (gs.questionNumber <= 20) {
             // game logic
 
-            // if question has progressed, increment
-            // base on timer
-            // gs.questionNumber++;
+            //if question has progressed, increment
+            //base on timer or question answered correctly
+            //gs.questionNumber++;
         }
 
         // if questions complete
