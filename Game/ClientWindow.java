@@ -43,13 +43,12 @@ public class ClientWindow implements ActionListener {
 	// write setters and getters as you need
 
 	public ClientWindow(String serverAddress, int port) {
-		try{
+		// try{
 
 			// Connect to the server 
-			socket = new Socket(serverAddress, port);
-			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			out = new PrintWriter(socket.getOutputStream(), true);
-
+			// socket = new Socket(InetAddress.getByName(serverAddress), port);
+			// in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			// out = new PrintWriter(socket.getOutputStream(), true);
 
 			JOptionPane.showMessageDialog(window, "This is a trivia game");
 	
@@ -57,7 +56,6 @@ public class ClientWindow implements ActionListener {
 			question = new JLabel("Waiting for the first question"); // represents the question
 			window.add(question);
 			question.setBounds(10, 5, 350, 100);
-			;
 	
 			options = new JRadioButton[4];
 			optionGroup = new ButtonGroup();
@@ -99,12 +97,12 @@ public class ClientWindow implements ActionListener {
 			window.setResizable(false);
 
 			//Start listening for questions from the server
-			new Thread(this :: listenForQuestions).start();
+			// new Thread(this :: listenForQuestions).start();
 
 
-		} catch(IOException e ){
-			JOptionPane.showMessageDialog(null, "Error connecting to Server: "  + e.getMessage());
-		}
+		// } catch(IOException e ){
+		// 	JOptionPane.showMessageDialog(null, "Error connecting to Server: "  + e.getMessage());
+		// }
 	}
 
 	private void listenForQuestions(){
@@ -149,7 +147,7 @@ public class ClientWindow implements ActionListener {
 		}
 		String[] parts = fileScanner.nextLine().split(" "); // read the first line and split by whitespace
 		String serverIP = parts[0]; 
-		int serverPort = Integer.parseInt(parts[1]); 
+		int serverPort = Integer.parseInt(parts[1]) - 1; 
 		switch (input) {
 			case "Option 1":
 

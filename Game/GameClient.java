@@ -14,10 +14,13 @@ public class GameClient {
 
     //constructor method
     public GameClient () {
+
         PrintWriter writer;
         try {
             //connect to server
             Socket socket = new Socket(InetAddress.getByName("127.0.0.1"), 8001);
+            ClientWindow gameWindow = new ClientWindow("127.0.0.1", 8000);
+
 
             System.out.println("guh");
 
@@ -25,7 +28,7 @@ public class GameClient {
             writer.println("fr");
             
             try {
-                Thread.sleep(10000);
+                Thread.sleep(30000);
             } catch (InterruptedException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();

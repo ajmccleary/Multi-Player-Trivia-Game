@@ -5,8 +5,6 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import javax.xml.crypto.Data;
-
 public class GameServer {
     //static variables
     private static GameServer gs;
@@ -115,7 +113,7 @@ public class GameServer {
         try (OutputStream out = clientSocket.getOutputStream();
             InputStream in = clientSocket.getInputStream()) {
             while (!gs.shutdownFlag) {
-                out.write(1);
+                // out.write(1);
 
                 //if question timer ends
                 if (gs.timerEndedFlag) {
@@ -197,6 +195,7 @@ public class GameServer {
     //monitor buzzer from all clients (UDP)
     public void UDPThread() {
         while (!shutdownFlag) {
+            System.out.println( "Waiting for buzzer signal..."); //debug message to show waiting state
             //initialize reply packet
             byte[] incomingData = new byte[1024]; //buffer for incoming data
             DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
