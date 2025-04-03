@@ -112,24 +112,26 @@ public class GameServer {
         //periodically blast question and question data to client
         try (OutputStream out = clientSocket.getOutputStream();
             InputStream in = clientSocket.getInputStream()) {
-            while (!gs.shutdownFlag) {
-                out.write(1);
-                   
-                    //Send each question and its options to the client
-                    for(int i = 0; i< questions.length; i++){
-                        StringBuilder questionData = new StringBuilder(questions[i]);
-                        for(int j = 0; j < 4; j++){
-                            questionData.append(";").append(options.get(j + (i * 4)));
-                            System.out.println("The fuck");
-                        }
-                        // Sends the questions and options
-                        System.out.println(questionData.toString());
-                        Thread.sleep(20000);    // wait 20 seconds before sending the next question
+            while (!gs.shutdownFlag) {                   
+                //Send each question and its options to the client
+                for(int i = 0; i< questions.length; i++){
+                    StringBuilder questionData = new StringBuilder(questions[i]);
+                    for(int j = 0; j < 4; j++){
+                        questionData.append(";").append(options.get(j + (i * 4)));
+                        System.out.println("The fuck");
                     }
+                    // Sends the questions and options to the client
+                    out.write(questionData.toString().getBytes());
+                    
+                    //stall until timer ends
+                    while (!gs.timerEndedFlag)
+                        Thread.sleep(1000);
+                }
                
-                //if question timer ends
-                if (gs.timerEndedFlag) {
-                    synchronized (gs.buzzerQueue) {
+                //run on one thread at a time
+                synchronized (gs.buzzerQueue) {
+                    //if question timer ends
+                    if (gs.timerEndedFlag) {
                         //check if top of queue equals client ID
                         if (gs.buzzerQueue.peek().equals(clientID)) {
                             //send ack message to winner
@@ -168,9 +170,6 @@ public class GameServer {
 
                                 //decrement currentScore
                                 currentScore -= 10;
-
-                                //trip flag to pop from queue again
-                                
                             }
 
                             //update current score
@@ -220,18 +219,8 @@ public class GameServer {
             String message = new String(incomingPacket.getData());
             System.out.println( "Received buzzer message: " + message.trim());
 
-            byte[] replyData = new byte[1024];
-            DatagramPacket replyPacket = new DatagramPacket(replyData, replyData.length);
-
-            // use UDP socket
-            try {
-                buzzerSocket.receive(replyPacket);
-            } catch (IOException e) {
-                System.out.println("Failed to connect socket. Reason " + e.getMessage());
-            }
-
             // add replies to queue in order received
-            gs.buzzerQueue.add(replyPacket.getAddress().getHostAddress() + ":" + replyPacket.getPort());
+            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + incomingPacket.getPort());
 
             //queue is then handled in seperate thread clientThread
         }
@@ -255,14 +244,30 @@ public class GameServer {
 
         // gameplay loop
         while (gs.questionNumber <= 20) {
-            // game logic
+            //if there is more than one client, begin game
+            if (gs.clients.size() > 0) {
+                try {
+                    System.out.println("DEBUG: Starting question " + (gs.questionNumber + 1) + " out of 20");
 
-            //if question has progressed, increment
-            //base on timer or question answered correctly
-            //gs.questionNumber++;
+                    //timer for 20 seconds
+                    Thread.sleep(20000);
+
+                    //when timer ends, set flag to true
+                    gs.timerEndedFlag = true;
+
+                    //increment question number
+                    gs.questionNumber++;
+
+                    //ASK - hang until question is answered?
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         // if questions complete
         gs.shutdownFlag = true;
+
+        //winner logic here?
     }
 }

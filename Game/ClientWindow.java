@@ -31,7 +31,7 @@ public class ClientWindow implements ActionListener {
 	private JLabel timer;
 	private JLabel score;
 	private TimerTask clock;
-	
+	private String answer;
 
 	private JFrame window;
 
@@ -151,19 +151,19 @@ public class ClientWindow implements ActionListener {
 		int serverPort = Integer.parseInt(parts[1]) - 1; 
 		switch (input) {
 			case "Option 1":
-
+				this.answer = "a";
 				break;
 
 			case "Option 2": 
-
+				this.answer = "b";
 				break;
 
 			case "Option 3": 
-
+				this.answer = "c";
 				break;
 
 			case "Option 4": 
-
+				this.answer = "d";
 				break;
 
 			case "Poll":
@@ -193,13 +193,13 @@ public class ClientWindow implements ActionListener {
 
 		// test code below to demo enable/disable components
 		// DELETE THE CODE BELOW FROM HERE***
-		if (poll.isEnabled()) {
-			poll.setEnabled(false);
-			submit.setEnabled(true);
-		} else {
-			poll.setEnabled(true);
-			submit.setEnabled(false);
-		}
+		// if (poll.isEnabled()) {
+		// 	poll.setEnabled(false);
+		// 	submit.setEnabled(true);
+		// } else {
+		// 	poll.setEnabled(true);
+		// 	submit.setEnabled(false);
+		// }
 
 		question.setText("Q2. This is another test problem " + random.nextInt());
 
