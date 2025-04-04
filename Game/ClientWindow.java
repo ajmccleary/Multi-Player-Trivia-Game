@@ -1,4 +1,4 @@
-package game;
+package Game;
 
 import java.awt.Color;
 import java.awt.event.ActionEvent;
@@ -44,12 +44,12 @@ public class ClientWindow implements ActionListener {
 	// write setters and getters as you need
 
 	public ClientWindow(String serverAddress, int port) {
-		// try{
+		try{
 
-			// Connect to the server 
-			// socket = new Socket(InetAddress.getByName(serverAddress), port);
-			// in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			// out = new PrintWriter(socket.getOutputStream(), true);
+			//Connect to the server 
+			socket = new Socket(InetAddress.getByName(serverAddress), port);
+			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			out = new PrintWriter(socket.getOutputStream(), true);
 
 			JOptionPane.showMessageDialog(window, "This is a trivia game");
 	
@@ -98,12 +98,12 @@ public class ClientWindow implements ActionListener {
 			window.setResizable(false);
 
 			//Start listening for questions from the server
-			// new Thread(this :: listenForQuestions).start();
+			new Thread(this :: listenForQuestions).start();
 
 
-		// } catch(IOException e ){
-		// 	JOptionPane.showMessageDialog(null, "Error connecting to Server: "  + e.getMessage());
-		// }
+		} catch(IOException e ){
+			JOptionPane.showMessageDialog(null, "Error connecting to Server: "  + e.getMessage());
+		}
 	}
 
 	private void listenForQuestions(){
@@ -111,10 +111,12 @@ public class ClientWindow implements ActionListener {
 			String line;
 			while((line = in.readLine()) != null){
 				//Parse the question and options
-				String[] parts = line.split(";");
+				String[] parts = line.split(" ; ");
+				
 				
 				// Ensure the format is correct
-				if(parts.length ==5){
+				if(parts.length == 5) {
+					System.out.println("debug");
 					SwingUtilities.invokeLater(() -> {
 						question.setText(parts[0]);	// Set the questions
 						for(int i = 0; i < options.length; i++){
@@ -123,6 +125,7 @@ public class ClientWindow implements ActionListener {
 						}
 					});
 
+					System.out.println(parts[0]);
 				}
 			}
 		} catch (IOException e){
@@ -171,7 +174,7 @@ public class ClientWindow implements ActionListener {
 					String message = "buzz";
 					byte[] data = message.getBytes();
 					DatagramSocket socket = new DatagramSocket(1001);
-					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort);
+					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort - 1);
 					socket.send(packet);
 					System.out.println( "Buzz pressed, sending message to server...");
 					socket.close();
@@ -201,7 +204,7 @@ public class ClientWindow implements ActionListener {
 		// 	submit.setEnabled(false);
 		// }
 
-		question.setText("Q2. This is another test problem " + random.nextInt());
+		//question.setText("Q2. This is another test problem " + random.nextInt());
 
 		// you can also enable disable radio buttons
 		// options[random.nextInt(4)].setEnabled(false);

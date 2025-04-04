@@ -1,4 +1,4 @@
-package game;
+package Game;
 
 import java.io.*;
 import java.net.*;
@@ -112,22 +112,26 @@ public class GameServer {
         //periodically blast question and question data to client
         try (OutputStream out = clientSocket.getOutputStream();
             InputStream in = clientSocket.getInputStream()) {
-            while (!gs.shutdownFlag) {                   
+                               
                 //Send each question and its options to the client
-                for(int i = 0; i< questions.length; i++){
-                    StringBuilder questionData = new StringBuilder(questions[i]);
+                // for(int i = 0; i< questions.length; i++){
+                    StringBuilder questionData = new StringBuilder(questions[gs.questionNumber]);
                     for(int j = 0; j < 4; j++){
-                        questionData.append(";").append(options.get(j + (i * 4)));
-                        System.out.println("The fuck");
+                        questionData.append(" ; ").append(options.get(j + (gs.questionNumber * 4)));
+                       
                     }
+                    questionData.append("\n");
                     // Sends the questions and options to the client
                     out.write(questionData.toString().getBytes());
+                    out.flush();
+                    System.out.println("Fuck : " + questionData.toString());
                     
                     //stall until timer ends
                     while (!gs.timerEndedFlag)
                         Thread.sleep(1000);
-                }
-               
+                // }
+
+                while (!gs.shutdownFlag) {
                 //run on one thread at a time
                 synchronized (gs.buzzerQueue) {
                     //if question timer ends
@@ -135,7 +139,7 @@ public class GameServer {
                         //check if top of queue equals client ID
                         if (gs.buzzerQueue.peek().equals(clientID)) {
                             //send ack message to winner
-                            out.write("ack".getBytes());
+                            out.write("ack".getBytes()); //client knows it can now answer question
                             
                             //remove winner from queue
                             gs.buzzerQueue.poll(); 
@@ -157,7 +161,7 @@ public class GameServer {
                             //if client answer received is equal to the correct answer stored for the current question
                             else if (new String(response).equals(answers.get(questionNumber))) {
                                 //send "correct" message to client
-                                out.write("correct".getBytes());
+                                out.write("correct".getBytes()); //client now knows its score increased
 
                                 //increment currentScore
                                 currentScore += 10;
@@ -166,7 +170,7 @@ public class GameServer {
                                 gs.timerEndedFlag = false;
                             } else {
                                 //send "wrong" message to client
-                                out.write("wrong".getBytes());
+                                out.write("wrong".getBytes()); //client now knows its score decreased
 
                                 //decrement currentScore
                                 currentScore -= 10;
@@ -177,7 +181,7 @@ public class GameServer {
 
                         } else { //client not on top of queue
                             //send negative ack message
-                            out.write("negative-ack".getBytes());
+                            out.write("negative-ack".getBytes()); //client now knows it was not first in queue
                         }
                     }
                 }
@@ -234,6 +238,8 @@ public class GameServer {
         //initialize game server object
         GameServer.gs = new GameServer();
 
+        
+
         //initialize thread pool
         gs.executorService = Executors.newFixedThreadPool(5);
 
@@ -268,6 +274,7 @@ public class GameServer {
         // if questions complete
         gs.shutdownFlag = true;
 
+        
         //winner logic here?
     }
 }
