@@ -17,9 +17,9 @@ public class GameServer {
     //instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); //ASK - is this fine for ClientID requirment?
+    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); //clientID ("[ip]:[port]") and current score
     private int questionNumber = 0;
-    private boolean shutdownFlag, timerEndedFlag = false;
+    private boolean shutdownFlag, timerEndedFlag, nextQuestionFlag = false;
     
     //constructor method
     public GameServer() {
@@ -108,6 +108,7 @@ public class GameServer {
     public void clientThread (Socket clientSocket) {
         //store clientID
         String clientID = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+        System.out.println("DEBUG: Client thread started: " + clientID);
 
         //periodically blast question and question data to client
         try (OutputStream out = clientSocket.getOutputStream();
@@ -136,6 +137,8 @@ public class GameServer {
                 synchronized (gs.buzzerQueue) {
                     //if question timer ends
                     if (gs.timerEndedFlag) {
+                        System.out.println("DEBUG TIMER ENDED CLIENT THREAD");
+
                         //check if top of queue equals client ID
                         if (gs.buzzerQueue.peek().equals(clientID)) {
                             //send ack message to winner
@@ -147,7 +150,7 @@ public class GameServer {
                             //initialize holder for winner response
                             byte[] response = new byte[1024];
 
-                            //timer runs ten seconds - ASK is this fine for timer
+                            //timer runs ten seconds - DEV replace at some point with real timer
                             Thread.sleep(10000);
 
                             //get value of current score
@@ -168,6 +171,10 @@ public class GameServer {
 
                                 //reset timerEndedFlag to false
                                 gs.timerEndedFlag = false;
+
+                                //set next question flag to true
+                                gs.nextQuestionFlag = true;
+                                
                             } else {
                                 //send "wrong" message to client
                                 out.write("wrong".getBytes()); //client now knows its score decreased
@@ -191,7 +198,6 @@ public class GameServer {
             System.err.println("Communication error with client " + clientID + ": " + e.getMessage());
 
             //remove client from queue upon disconnect
-            
             gs.buzzerQueue.remove(clientID);
 
         } catch (InterruptedException e) {
@@ -264,7 +270,14 @@ public class GameServer {
                     //increment question number
                     gs.questionNumber++;
 
-                    //ASK - hang until question is answered?
+                    //pause until next question signal sent
+                    while (!gs.nextQuestionFlag) {
+                        Thread.sleep(1000);
+                    }
+
+                    //reset next question flag to false
+                    gs.nextQuestionFlag = false;
+
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

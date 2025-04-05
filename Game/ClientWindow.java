@@ -173,8 +173,8 @@ public class ClientWindow implements ActionListener {
 				try {
 					String message = "buzz";
 					byte[] data = message.getBytes();
-					DatagramSocket socket = new DatagramSocket(1001);
-					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort - 1);
+					DatagramSocket socket = new DatagramSocket();
+					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort);
 					socket.send(packet);
 					System.out.println( "Buzz pressed, sending message to server...");
 					socket.close();
