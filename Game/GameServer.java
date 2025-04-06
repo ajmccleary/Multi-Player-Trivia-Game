@@ -89,11 +89,6 @@ public class GameServer {
             try {
                 //receive prcoess and store data from client attempting to connect
                 Socket clientSocket = gameSocket.accept();
-                String clientIP = clientSocket.getInetAddress().getHostAddress();
-                int clientPort = clientSocket.getPort();
-
-                //initialize score to 0 (value) and tie to clientID (key)
-                clients.put(clientIP + ":" + clientPort, 0);
 
                 //create a new thread with the client's information to send questions to client
                 gs.executorService.submit(() -> gs.clientThread(clientSocket));
@@ -106,8 +101,12 @@ public class GameServer {
 
     //send question thread method (uses TCP)
     public void clientThread (Socket clientSocket) {
-        //store clientID
+        //store clientID as "[ip]:[port]"
         String clientID = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+        
+        //initialize score to 0 (value) and tie to clientID (key)
+        clients.put(clientID, 0);
+
         System.out.println("DEBUG: Client thread started: " + clientID);
 
         //periodically blast question and question data to client
@@ -139,8 +138,9 @@ public class GameServer {
                     if (gs.timerEndedFlag) {
                         System.out.println("DEBUG TIMER ENDED CLIENT THREAD");
 
-                        //check if top of queue equals client ID
                         if (gs.buzzerQueue.peek().equals(clientID)) {
+                            System.out.println("DEBUG: " + clientID + " was first in queue!");
+
                             //send ack message to winner
                             out.write("ack".getBytes()); //client knows it can now answer question
                             
@@ -157,9 +157,13 @@ public class GameServer {
                             int currentScore = clients.get(clientID);
 
                             //if no response received
-                            if (in.read(response) == -1)
+                            if (in.read(response) == -1) {
                                 //decrement currentScore
                                 currentScore -= 20;
+
+                                //for DEBUGGING purposes
+                                // gs.nextQuestionFlag = false;
+                            }
 
                             //if client answer received is equal to the correct answer stored for the current question
                             else if (new String(response).equals(answers.get(questionNumber))) {
@@ -183,7 +187,7 @@ public class GameServer {
                                 currentScore -= 10;
                             }
 
-                            //update current score
+                            //update current score for a given clientID
                             clients.put(clientID, currentScore);
 
                         } else { //client not on top of queue
@@ -226,13 +230,22 @@ public class GameServer {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            String message = new String(incomingPacket.getData());
-            System.out.println( "Received buzzer message: " + message.trim());
+            
+            //deserialize received packet
+            BuzzerProtocol receivedPacket = null;
+            try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(incomingPacket.getData());
+                ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
+                receivedPacket = (BuzzerProtocol) objectInputStream.readObject();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
 
-            // add replies to queue in order received
-            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + incomingPacket.getPort());
+            // add replies to queue in order received - DEV replace with protocol which just sends timestamp and port num
+            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); //use TCP portNum for later usage
 
-            //queue is then handled in seperate thread clientThread
+            //queue is then handled in seperate thread clientThreads
         }
     }
     
@@ -244,10 +257,8 @@ public class GameServer {
         //initialize game server object
         GameServer.gs = new GameServer();
 
-        
-
         //initialize thread pool
-        gs.executorService = Executors.newFixedThreadPool(5);
+        gs.executorService = Executors.newFixedThreadPool(10); //DEV do math for this at some point
 
         //run threads
         gs.executorService.submit(() -> gs.UDPThread());

@@ -5,6 +5,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.security.SecureRandom;
 import java.util.TimerTask;
 import java.util.Scanner;
@@ -19,6 +20,7 @@ import java.net.SocketException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 
@@ -116,7 +118,6 @@ public class ClientWindow implements ActionListener {
 				
 				// Ensure the format is correct
 				if(parts.length == 5) {
-					System.out.println("debug");
 					SwingUtilities.invokeLater(() -> {
 						question.setText(parts[0]);	// Set the questions
 						for(int i = 0; i < options.length; i++){
@@ -170,10 +171,23 @@ public class ClientWindow implements ActionListener {
 				break;
 
 			case "Poll":
-				try {
-					String message = "buzz";
-					byte[] data = message.getBytes();
-					DatagramSocket socket = new DatagramSocket();
+				try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); //initialize byteArrayOutputStream
+                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)){ //initialize objectOutput Stream to byteArrayOutputStream)
+					
+					//initialize buzz packet
+					BuzzerProtocol buzzPacket = new BuzzerProtocol(socket.getLocalPort());
+
+					//write protocol packet to byte array output stream
+                    try {
+                        objectOutputStream.writeObject(buzzPacket);
+                    } catch (IOException IOE) {
+						IOE.printStackTrace();
+					}
+
+					//convert to byte array
+					byte[] data = byteArrayOutputStream.toByteArray();
+
+					DatagramSocket socket = new DatagramSocket(); //client UDP socket
 					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort);
 					socket.send(packet);
 					System.out.println( "Buzz pressed, sending message to server...");
