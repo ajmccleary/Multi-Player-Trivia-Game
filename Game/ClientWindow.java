@@ -43,6 +43,12 @@ public class ClientWindow implements ActionListener {
 
 	// write setters and getters as you need
 
+	// 
+	// Do part c ack is first in queue and negative ack isn't first in queue. If received ack is first in queue and can press the submit button 
+	// Handle signles sent by client thread. search for  .getBytes in Gameserver
+	// Same as listen for questions but don't have split the 
+
+
 	public ClientWindow(String serverAddress, int port) {
 		try{
 
@@ -110,22 +116,46 @@ public class ClientWindow implements ActionListener {
 		try{
 			String line;
 			while((line = in.readLine()) != null){
-				//Parse the question and options
-				String[] parts = line.split(" ; ");
-				
-				
-				// Ensure the format is correct
-				if(parts.length == 5) {
-					System.out.println("debug");
-					SwingUtilities.invokeLater(() -> {
-						question.setText(parts[0]);	// Set the questions
-						for(int i = 0; i < options.length; i++){
-							options[i].setText(parts[i + 1]);	// Set the options
-							options[i].setEnabled(true);	// Enable the options
-						}
-					});
+				if(line.equals("ack")){
 
-					System.out.println(parts[0]);
+					//Enable options and submit button
+					SwingUtilities.invokeLater(() -> {
+						for(JRadioButton option : options){
+							option.setEnabled(true);
+						}
+						submit.setEnabled(true);
+					});
+					System.out.println("Received ack");
+				} else if(line.equals("negative-ack")){
+					
+					//Disable options and submit button
+					SwingUtilities.invokeLater(() -> {
+						for(JRadioButton option : options){
+							option.setEnabled(false);
+						}
+						submit.setEnabled(false);
+					});
+					System.out.println("Received negative-ack");
+				} else{
+
+					//Parse the question and options
+					String[] parts = line.split(" ; ");
+					
+					
+					// Ensure the format is correct
+					if(parts.length == 5) {
+						System.out.println("debug");
+						SwingUtilities.invokeLater(() -> {
+							question.setText(parts[0]);	// Set the questions
+							for(int i = 0; i < options.length; i++){
+								options[i].setText(parts[i + 1]);	// Set the options
+								options[i].setEnabled(true);	// Enable the options
+							}
+							submit.setEnabled(false);	//Initially disable  the submit button 
+						});
+	
+						System.out.println(parts[0]);
+					}
 				}
 			}
 		} catch (IOException e){
@@ -172,6 +202,8 @@ public class ClientWindow implements ActionListener {
 			case "Poll":
 				try {
 					String message = "buzz";
+					out.println(message);
+					out.flush();
 					byte[] data = message.getBytes();
 					DatagramSocket socket = new DatagramSocket(1001);
 					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort - 1);
@@ -187,7 +219,19 @@ public class ClientWindow implements ActionListener {
 				break;
 
 			case "Submit": 
+				//send selected answeer this.answewe to server
+				try{
+					if(answer != null){
+						out.println("answer: " + answer);
+						out.flush();
+						System.out.println("Answer submitted: " + answer);
 
+					} else{
+						System.out.println("No option selected");
+					}
+				} catch (Exception e1){
+					e1.printStackTrace();
+				}
 				break;
 
 			default:
