@@ -154,6 +154,18 @@ public class ClientWindow implements ActionListener {
 
 				} else if (line.equals("wrong")) {
 
+				} else if (line.startsWith("Score:")){
+					//Update the score label
+					String[] parts = line.split(": ");
+					if(parts.length == 2){
+						this.scoreValue = Integer.parseInt(parts[1]);
+						SwingUtilities.invokeLater(() -> {
+							score.setText("Score: " + this.scoreValue);
+						});
+					}
+				} else if (line.equals("end")) {
+					JOptionPane.showMessageDialog(window, "Game Over! Your score is: " + this.scoreValue);
+					System.exit(0);
 				} else {
 
 					//Parse the question and options

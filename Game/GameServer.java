@@ -129,6 +129,11 @@ public class GameServer {
                     out.flush();
                     System.out.println("Fuck : " + questionData.toString());
                     
+                    // Send the score to each individual client
+                    String scoreMessage = "Score: " + clients.get(clientID) + "\n";
+                    out.write(scoreMessage.getBytes());
+                    out.flush();
+
                     //wait to allow other threads to register nextQuestionFlag before setting it back to false
                     Thread.sleep(1500);
                     nextQuestionFlag = false;
@@ -225,6 +230,7 @@ public class GameServer {
 
         } finally {
             try {
+                System.out.println("DEBUG: Closing client socket: " + clientID);
                 clientSocket.close();
             } catch (IOException e) {
                 System.err.println("Error closing client socket: " + e.getMessage());
