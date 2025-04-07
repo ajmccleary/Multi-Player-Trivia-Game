@@ -130,6 +130,7 @@ public class ClientWindow implements ActionListener {
 							option.setEnabled(true);
 						}
 						submit.setEnabled(true);
+						poll.setEnabled(false);
 					});
 					System.out.println("Received ack");
 
@@ -141,12 +142,13 @@ public class ClientWindow implements ActionListener {
 							option.setEnabled(false);
 						}
 						submit.setEnabled(false);
+						poll.setEnabled(false);
 					});
 					System.out.println("Received negative-ack");
 
 				} else if (line.equals("next")) {
 					this.questionNumber++;
-					
+
 
 				} else if (line.equals("correct")) {
 
@@ -166,9 +168,10 @@ public class ClientWindow implements ActionListener {
 								options[i].setEnabled(true);	// Enable the options
 							}
 							submit.setEnabled(false);	//Initially disable  the submit button
+							poll.setEnabled(true);
 
 							// Reset the timer for the new question
-							resetTimer(30);
+							resetTimer(20);
 						});
 	
 						System.out.println(parts[0]);
@@ -243,8 +246,6 @@ public class ClientWindow implements ActionListener {
 						out.flush();
 						System.out.println("Answer submitted: " + this.answer);
 						submit.setEnabled(false);
-
-						
 
 					} else{
 						System.out.println("No option selected");
