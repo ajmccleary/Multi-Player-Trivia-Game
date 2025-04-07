@@ -131,7 +131,7 @@ public class GameServer {
                         Thread.sleep(1000);
                 // }
 
-                while (!gs.shutdownFlag) {
+            while (!gs.shutdownFlag) {
                 //run on one thread at a time
                 synchronized (gs.buzzerQueue) {
                     //if question timer ends
@@ -142,8 +142,9 @@ public class GameServer {
                             System.out.println("DEBUG: " + clientID + " was first in queue!");
 
                             //send ack message to winner
-                            out.write("ack".getBytes()); //client knows it can now answer question
-                            
+                            out.write("ack\n".getBytes()); //client knows it can now answer question
+                            out.flush();
+
                             //remove winner from queue
                             gs.buzzerQueue.poll(); 
 
@@ -168,31 +169,36 @@ public class GameServer {
                             //if client answer received is equal to the correct answer stored for the current question
                             else if (new String(response).equals(answers.get(questionNumber))) {
                                 //send "correct" message to client
-                                out.write("correct".getBytes()); //client now knows its score increased
+                                out.write("correct\n".getBytes()); //client now knows its score increased
+                                out.flush();
 
                                 //increment currentScore
                                 currentScore += 10;
-
-                                //reset timerEndedFlag to false
-                                gs.timerEndedFlag = false;
-
-                                //set next question flag to true
-                                gs.nextQuestionFlag = true;
                                 
                             } else {
                                 //send "wrong" message to client
-                                out.write("wrong".getBytes()); //client now knows its score decreased
+                                out.write("wrong\n".getBytes()); //client now knows its score decreased
+                                out.flush();
 
                                 //decrement currentScore
                                 currentScore -= 10;
                             }
 
+                            System.out.println("IT WORKS! " + clientID + " score: " + currentScore);
+
                             //update current score for a given clientID
                             clients.put(clientID, currentScore);
 
+                            //reset timerEndedFlag to false
+                            gs.timerEndedFlag = false;
+
+                            //set next question flag to true
+                            gs.nextQuestionFlag = true;
+
                         } else { //client not on top of queue
                             //send negative ack message
-                            out.write("negative-ack".getBytes()); //client now knows it was not first in queue
+                            out.write("negative-ack\n".getBytes()); //client now knows it was not first in queue
+                            out.flush();
                         }
                     }
                 }
@@ -219,18 +225,20 @@ public class GameServer {
 
     //monitor buzzer from all clients (UDP)
     public void UDPThread() {
-        while (!shutdownFlag) {
+        while (!gs.shutdownFlag) {
             System.out.println( "Waiting for buzzer signal..."); //debug message to show waiting state
+            
             //initialize reply packet
             byte[] incomingData = new byte[1024]; //buffer for incoming data
             DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+
             try {
                 buzzerSocket.receive(incomingPacket);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            
+
             //deserialize received packet
             BuzzerProtocol receivedPacket = null;
             try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(incomingPacket.getData());
@@ -242,7 +250,7 @@ public class GameServer {
                 e.printStackTrace();
             }
 
-            // add replies to queue in order received - DEV replace with protocol which just sends timestamp and port num
+            // add replies to queue in order received
             gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); //use TCP portNum for later usage
 
             //queue is then handled in seperate thread clientThreads

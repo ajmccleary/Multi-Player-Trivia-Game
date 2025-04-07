@@ -12,6 +12,8 @@ import java.util.Scanner;
 import java.util.Timer;
 import javax.swing.*;
 
+import Game.ClientWindow.TimerCode;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -183,7 +185,7 @@ public class ClientWindow implements ActionListener {
 		String[] parts = fileScanner.nextLine().split(" "); // read the first line and split by whitespace
 		String serverIP = parts[0]; 
 		int serverPort = Integer.parseInt(parts[1]) - 1; 
-		switch (input) {
+		switch (input) { //need to find a way to identify which option was selected
 			case "Option 1":
 				this.answer = "a";
 				break;
@@ -201,13 +203,31 @@ public class ClientWindow implements ActionListener {
 				break;
 
 			case "Poll":
-				try {
-					String message = "buzz";
-					byte[] data = message.getBytes();
-					DatagramSocket socket = new DatagramSocket(1001);
-					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort - 1);
+				try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); //initialize byteArrayOutputStream
+				ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)){ //initialize objectOutput Stream to byteArrayOutputStream)
+					
+					//initialize buzz packet
+					BuzzerProtocol buzzPacket = new BuzzerProtocol(socket.getLocalPort());
+
+					//write protocol packet to byte array output stream
+                    try {
+                        objectOutputStream.writeObject(buzzPacket);
+                    } catch (IOException IOE) {
+						IOE.printStackTrace();
+					}
+
+					//convert to byte array
+					byte[] data = byteArrayOutputStream.toByteArray();
+
+					//create UDP socket and packet
+					DatagramSocket socket = new DatagramSocket();
+					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort);
+					
+					//send packet via socket
 					socket.send(packet);
+
 					System.out.println( "Buzz pressed, sending message to server...");
+					//close UDP socket
 					socket.close();
 				} catch (SocketException socketException) {
 					System.out.println("Error in creating DatagramSocket: " + socketException.getMessage());
@@ -221,9 +241,9 @@ public class ClientWindow implements ActionListener {
 				//send selected answeer this.answewe to server
 				try{
 					if(answer != null){
-						out.println("answer: " + answer);
+						out.println("answer: " + this.answer);
 						out.flush();
-						System.out.println("Answer submitted: " + answer);
+						System.out.println("Answer submitted: " + this.answer);
 
 					} else{
 						System.out.println("No option selected");
