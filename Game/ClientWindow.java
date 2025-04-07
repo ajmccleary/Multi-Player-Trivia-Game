@@ -186,22 +186,6 @@ public class ClientWindow implements ActionListener {
 		String serverIP = parts[0]; 
 		int serverPort = Integer.parseInt(parts[1]) - 1; 
 		switch (input) { //need to find a way to identify which option was selected
-			case "Option 1":
-				this.answer = "a";
-				break;
-
-			case "Option 2": 
-				this.answer = "b";
-				break;
-
-			case "Option 3": 
-				this.answer = "c";
-				break;
-
-			case "Option 4": 
-				this.answer = "d";
-				break;
-
 			case "Poll":
 				try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); //initialize byteArrayOutputStream
 				ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)){ //initialize objectOutput Stream to byteArrayOutputStream)
@@ -241,7 +225,7 @@ public class ClientWindow implements ActionListener {
 				//send selected answeer this.answewe to server
 				try{
 					if(answer != null){
-						out.println("answer: " + this.answer);
+						out.print(this.answer);
 						out.flush();
 						System.out.println("Answer submitted: " + this.answer);
 
@@ -254,7 +238,16 @@ public class ClientWindow implements ActionListener {
 				break;
 
 			default:
-				System.out.println("Incorrect Option");
+				//handle option selected
+				if (input.equals(options[0].getText())) {
+					this.answer = "a";
+				} else if (input.equals(options[1].getText())) {
+					this.answer = "b";
+				} else if (input.equals(options[2].getText())) {
+					this.answer = "c";
+				} else if (input.equals(options[3].getText())) {
+					this.answer = "d";
+				}
 		}
 
 		// test code below to demo enable/disable components

@@ -175,7 +175,7 @@ public class GameServer {
                             }
 
                             //if client answer received is equal to the correct answer stored for the current question
-                            else if (new String(response).equals(answers.get(questionNumber))) {
+                            else if (new String(response).trim().equals(answers.get(questionNumber))) {
                                 //send "correct" message to client
                                 out.write("correct\n".getBytes()); //client now knows its score increased
                                 out.flush();
@@ -192,6 +192,7 @@ public class GameServer {
                                 currentScore -= 10;
                             }
 
+                            //for DEBUGGING purposes
                             System.out.println("IT WORKS! " + clientID + " score: " + currentScore);
 
                             //update current score for a given clientID
@@ -299,17 +300,13 @@ public class GameServer {
                     // when timer ends, set flag to true
                     gs.timerEndedFlag = true;
 
-                    // increment question number
-                    gs.questionNumber++;
-
-                    // pause until next question signal sent
+                    //pause until next question signal sent
                     while (!gs.nextQuestionFlag) {
                         Thread.sleep(1000);
                     }
-
-                    // reset next question flag to false
-                    gs.nextQuestionFlag = false;
-
+                    
+                    //increment question number
+                    gs.questionNumber++;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -318,7 +315,7 @@ public class GameServer {
 
         // if questions complete
         gs.shutdownFlag = true;
-
-        // winner logic here?
+        
+        //winner logic here?
     }
 }
