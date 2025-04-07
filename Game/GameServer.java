@@ -17,7 +17,7 @@ public class GameServer {
     // instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); // clientID ("[ip]:[port]") and current score
+    private ConcurrentHashMap<String, Integer> clients = new ConcurrentHashMap<String, Integer>(); // clientID ("[ip]:[port]") and current score
     private int questionNumber = 0;
     private boolean shutdownFlag, timerEndedFlag, nextQuestionFlag;
 
