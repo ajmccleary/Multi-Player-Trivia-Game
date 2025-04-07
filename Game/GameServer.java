@@ -17,11 +17,9 @@ public class GameServer {
     // instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); // clientID ("[ip]:[port]") and current
-                                                                               // score
+    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); // clientID ("[ip]:[port]") and current score
     private int questionNumber = 0;
     private boolean shutdownFlag, timerEndedFlag, nextQuestionFlag;
-
 
     // constructor method
     public GameServer() {
@@ -120,13 +118,10 @@ public class GameServer {
             while (!gs.shutdownFlag) {
                                
                 //Send each question and its options to the client
-                // for(int i = 0; i< questions.length; i++){
                 if(nextQuestionFlag){
-                    nextQuestionFlag = false;
                     StringBuilder questionData = new StringBuilder(questions[gs.questionNumber]);
                         for(int j = 0; j < 4; j++){
-                        questionData.append(" ; ").append(options.get(j + (gs.questionNumber * 4)));
-                       
+                            questionData.append(" ; ").append(options.get(j + (gs.questionNumber * 4)));
                         }
                     questionData.append("\n");
                     // Sends the questions and options to the client
@@ -134,18 +129,19 @@ public class GameServer {
                     out.flush();
                     System.out.println("Fuck : " + questionData.toString());
                     
-                    //stall until timer ends
-                    while (!gs.timerEndedFlag)
-                        Thread.sleep(1000);
+                    //wait to allow other threads to register nextQuestionFlag before setting it back to false
+                    Thread.sleep(1500);
+                    nextQuestionFlag = false;
                 }
 
 
-                //run on one thread at a time
-                synchronized (gs.buzzerQueue) {
-                    //if question timer ends
-                    if (gs.timerEndedFlag) {
+                //if question timer ends
+                if (gs.timerEndedFlag) {
+                    //run on one thread at a time
+                    synchronized (gs.buzzerQueue) {
                         System.out.println("DEBUG TIMER ENDED CLIENT THREAD");
 
+                        //check top of buzzer queue against current clientID of current clientThread
                         if (gs.buzzerQueue.peek().equals(clientID)) {
                             System.out.println("DEBUG: " + clientID + " was first in queue!");
 
@@ -169,9 +165,6 @@ public class GameServer {
                             if (in.read(response) == -1) {
                                 //decrement currentScore
                                 currentScore -= 20;
-
-                                //for DEBUGGING purposes
-                                // gs.nextQuestionFlag = false;
                             }
 
                             //if client answer received is equal to the correct answer stored for the current question
@@ -203,6 +196,13 @@ public class GameServer {
 
                             //set next question flag to true
                             gs.nextQuestionFlag = true;
+
+                            //increment question number
+                            gs.questionNumber++;
+
+                            //clear buzzer queue at start of each question
+                            System.out.println("DEBUG Clearing Queue");
+                            gs.buzzerQueue.clear();
 
                         } else { //client not on top of queue
                             //send negative ack message
@@ -260,12 +260,7 @@ public class GameServer {
             }
 
             // add replies to queue in order received
-            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); // use
-                                                                                                               // TCP
-                                                                                                               // portNum
-                                                                                                               // for
-                                                                                                               // later
-                                                                                                               // usage
+            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); //uses deserialized receivedPacket to get TCP port num
 
             // queue is then handled in seperate thread clientThreads
         }
@@ -304,9 +299,7 @@ public class GameServer {
                     while (!gs.nextQuestionFlag) {
                         Thread.sleep(1000);
                     }
-                    
-                    //increment question number
-                    gs.questionNumber++;
+
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

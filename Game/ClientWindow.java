@@ -36,6 +36,8 @@ public class ClientWindow implements ActionListener {
 	private JLabel score;
 	private TimerTask clock;
 	private String answer;
+	private int questionNumber = 0; // to keep track of the question number
+	private int scoreValue = 0; // to keep track of the score
 
 	private JFrame window;
 
@@ -108,7 +110,7 @@ public class ClientWindow implements ActionListener {
 			window.setResizable(false);
 
 			//Start listening for questions from the server
-			new Thread(this :: listenForQuestions).start();
+			new Thread(this :: listenForMessage).start();
 
 
 		} catch(IOException e ){
@@ -116,7 +118,7 @@ public class ClientWindow implements ActionListener {
 		}
 	}
 
-	private void listenForQuestions(){
+	private void listenForMessage(){
 		try{
 			String line;
 			while((line = in.readLine()) != null){
@@ -130,6 +132,7 @@ public class ClientWindow implements ActionListener {
 						submit.setEnabled(true);
 					});
 					System.out.println("Received ack");
+
 				} else if(line.equals("negative-ack")){
 					
 					//Disable options and submit button
@@ -140,15 +143,23 @@ public class ClientWindow implements ActionListener {
 						submit.setEnabled(false);
 					});
 					System.out.println("Received negative-ack");
-				} else{
+
+				} else if (line.equals("next")) {
+					this.questionNumber++;
+					
+
+				} else if (line.equals("correct")) {
+
+				} else if (line.equals("wrong")) {
+
+				} else {
 
 					//Parse the question and options
 					String[] parts = line.split(" ; ");
 					
-					
 					// Ensure the format is correct
 					if(parts.length == 5) {
-							SwingUtilities.invokeLater(() -> {
+						SwingUtilities.invokeLater(() -> {
 							question.setText(parts[0]);	// Set the questions
 							for(int i = 0; i < options.length; i++){
 								options[i].setText(parts[i + 1]);	// Set the options
