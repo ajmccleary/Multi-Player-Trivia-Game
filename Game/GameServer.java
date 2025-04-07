@@ -6,23 +6,28 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class GameServer {
-    //static variables
+    // static variables
     private static GameServer gs;
     private static int portNum = 8001;
-    private static DatagramSocket buzzerSocket; //UDP buzzer socket
-    private static ServerSocket gameSocket; //TCP game socket
-    private static String[] questions; //20 questions
-    private static List<String> options, answers; //options is four per questions, answers is one per question
-    
-    //instance variables
+    private static DatagramSocket buzzerSocket; // UDP buzzer socket
+    private static ServerSocket gameSocket; // TCP game socket
+    private static String[] questions; // 20 questions
+    private static List<String> options, answers; // options is four per questions, answers is one per question
+
+    // instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); //clientID ("[ip]:[port]") and current score
+    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); // clientID ("[ip]:[port]") and current
+                                                                               // score
     private int questionNumber = 0;
-    private boolean shutdownFlag, timerEndedFlag, nextQuestionFlag = false;
-    
-    //constructor method
+    private boolean shutdownFlag, timerEndedFlag, nextQuestionFlag;
+
+
+    // constructor method
     public GameServer() {
+        this.shutdownFlag = false;
+        this.timerEndedFlag = false;
+        this.nextQuestionFlag = true;
         // connect to specified socket for UDP and TCP connections
         try {
             // port num 8000 for buzzer
@@ -56,10 +61,10 @@ public class GameServer {
         // initialize array to hold questions
         questions = new String[size];
 
-        //initialize options to hold all options
+        // initialize options to hold all options
         options = new ArrayList<>();
 
-        //initialize answers to hold all answers
+        // initialize answers to hold all answers
         answers = new ArrayList<>();
 
         int index = 0;
@@ -83,14 +88,14 @@ public class GameServer {
         }
     }
 
-    //detect when clients attempt to connect, create new thread per client
+    // detect when clients attempt to connect, create new thread per client
     public void listenThread() {
         while (!gs.shutdownFlag) {
             try {
-                //receive prcoess and store data from client attempting to connect
+                // receive prcoess and store data from client attempting to connect
                 Socket clientSocket = gameSocket.accept();
 
-                //create a new thread with the client's information to send questions to client
+                // create a new thread with the client's information to send questions to client
                 gs.executorService.submit(() -> gs.clientThread(clientSocket));
             } catch (IOException e) {
                 // TODO Auto-generated catch block
@@ -99,7 +104,7 @@ public class GameServer {
         }
     }
 
-    //send question thread method (uses TCP)
+    // send question thread method (uses TCP)
     public void clientThread (Socket clientSocket) {
         //store clientID as "[ip]:[port]"
         String clientID = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
@@ -111,15 +116,18 @@ public class GameServer {
 
         //periodically blast question and question data to client
         try (OutputStream out = clientSocket.getOutputStream();
-            InputStream in = clientSocket.getInputStream()) {
+        InputStream in = clientSocket.getInputStream()) {
+            while (!gs.shutdownFlag) {
                                
                 //Send each question and its options to the client
                 // for(int i = 0; i< questions.length; i++){
+                if(nextQuestionFlag){
+                    nextQuestionFlag = false;
                     StringBuilder questionData = new StringBuilder(questions[gs.questionNumber]);
-                    for(int j = 0; j < 4; j++){
+                        for(int j = 0; j < 4; j++){
                         questionData.append(" ; ").append(options.get(j + (gs.questionNumber * 4)));
                        
-                    }
+                        }
                     questionData.append("\n");
                     // Sends the questions and options to the client
                     out.write(questionData.toString().getBytes());
@@ -129,9 +137,9 @@ public class GameServer {
                     //stall until timer ends
                     while (!gs.timerEndedFlag)
                         Thread.sleep(1000);
-                // }
+                }
 
-            while (!gs.shutdownFlag) {
+
                 //run on one thread at a time
                 synchronized (gs.buzzerQueue) {
                     //if question timer ends
@@ -223,13 +231,13 @@ public class GameServer {
         }
     }
 
-    //monitor buzzer from all clients (UDP)
+    // monitor buzzer from all clients (UDP)
     public void UDPThread() {
         while (!gs.shutdownFlag) {
-            System.out.println( "Waiting for buzzer signal..."); //debug message to show waiting state
-            
-            //initialize reply packet
-            byte[] incomingData = new byte[1024]; //buffer for incoming data
+            System.out.println("Waiting for buzzer signal..."); // debug message to show waiting state
+
+            // initialize reply packet
+            byte[] incomingData = new byte[1024]; // buffer for incoming data
             DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
 
             try {
@@ -239,10 +247,10 @@ public class GameServer {
                 e.printStackTrace();
             }
 
-            //deserialize received packet
+            // deserialize received packet
             BuzzerProtocol receivedPacket = null;
             try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(incomingPacket.getData());
-                ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
+                    ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
                 receivedPacket = (BuzzerProtocol) objectInputStream.readObject();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -251,50 +259,55 @@ public class GameServer {
             }
 
             // add replies to queue in order received
-            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); //use TCP portNum for later usage
+            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); // use
+                                                                                                               // TCP
+                                                                                                               // portNum
+                                                                                                               // for
+                                                                                                               // later
+                                                                                                               // usage
 
-            //queue is then handled in seperate thread clientThreads
+            // queue is then handled in seperate thread clientThreads
         }
     }
-    
-    //main
-    public static void main (String args[]) { //hi zak (and not fahim) - jjguy
-        //print start message
+
+    // main
+    public static void main(String args[]) { // hi zak (and not fahim) - jjguy
+        // print start message
         System.out.println("Game Server Starting...");
 
-        //initialize game server object
+        // initialize game server object
         GameServer.gs = new GameServer();
 
-        //initialize thread pool
-        gs.executorService = Executors.newFixedThreadPool(10); //DEV do math for this at some point
+        // initialize thread pool
+        gs.executorService = Executors.newFixedThreadPool(10); // DEV do math for this at some point
 
-        //run threads
+        // run threads
         gs.executorService.submit(() -> gs.UDPThread());
 
         gs.executorService.submit(() -> gs.listenThread());
 
         // gameplay loop
         while (gs.questionNumber <= 20) {
-            //if there is more than one client, begin game
+            // if there is more than one client, begin game
             if (gs.clients.size() > 0) {
                 try {
                     System.out.println("DEBUG: Starting question " + (gs.questionNumber + 1) + " out of 20");
 
-                    //timer for 20 seconds
+                    // timer for 20 seconds
                     Thread.sleep(20000);
 
-                    //when timer ends, set flag to true
+                    // when timer ends, set flag to true
                     gs.timerEndedFlag = true;
 
-                    //increment question number
+                    // increment question number
                     gs.questionNumber++;
 
-                    //pause until next question signal sent
+                    // pause until next question signal sent
                     while (!gs.nextQuestionFlag) {
                         Thread.sleep(1000);
                     }
 
-                    //reset next question flag to false
+                    // reset next question flag to false
                     gs.nextQuestionFlag = false;
 
                 } catch (InterruptedException e) {
@@ -306,7 +319,6 @@ public class GameServer {
         // if questions complete
         gs.shutdownFlag = true;
 
-        
-        //winner logic here?
+        // winner logic here?
     }
 }
