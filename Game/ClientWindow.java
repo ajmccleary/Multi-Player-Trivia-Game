@@ -231,9 +231,9 @@ public class ClientWindow implements ActionListener {
 						out.print(this.answer);
 						out.flush();
 						System.out.println("Answer submitted: " + this.answer);
-						//submit.setEnabled(false);
+						submit.setEnabled(false);
 
-						resetTimer(20);
+						
 
 					} else{
 						System.out.println("No option selected");
