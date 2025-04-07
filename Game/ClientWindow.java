@@ -5,6 +5,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.security.SecureRandom;
 import java.util.TimerTask;
 import java.util.Scanner;
@@ -19,6 +20,7 @@ import java.net.SocketException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 
@@ -144,8 +146,7 @@ public class ClientWindow implements ActionListener {
 					
 					// Ensure the format is correct
 					if(parts.length == 5) {
-						System.out.println("debug");
-						SwingUtilities.invokeLater(() -> {
+							SwingUtilities.invokeLater(() -> {
 							question.setText(parts[0]);	// Set the questions
 							for(int i = 0; i < options.length; i++){
 								options[i].setText(parts[i + 1]);	// Set the options
@@ -202,8 +203,6 @@ public class ClientWindow implements ActionListener {
 			case "Poll":
 				try {
 					String message = "buzz";
-					out.println(message);
-					out.flush();
 					byte[] data = message.getBytes();
 					DatagramSocket socket = new DatagramSocket(1001);
 					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort - 1);
