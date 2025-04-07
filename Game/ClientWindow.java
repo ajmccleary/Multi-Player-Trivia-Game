@@ -154,7 +154,10 @@ public class ClientWindow implements ActionListener {
 								options[i].setText(parts[i + 1]);	// Set the options
 								options[i].setEnabled(true);	// Enable the options
 							}
-							submit.setEnabled(false);	//Initially disable  the submit button 
+							submit.setEnabled(false);	//Initially disable  the submit button
+
+							// Reset the timer for the new question
+							resetTimer(30);
 						});
 	
 						System.out.println(parts[0]);
@@ -228,6 +231,9 @@ public class ClientWindow implements ActionListener {
 						out.print(this.answer);
 						out.flush();
 						System.out.println("Answer submitted: " + this.answer);
+						//submit.setEnabled(false);
+
+						resetTimer(20);
 
 					} else{
 						System.out.println("No option selected");
@@ -267,6 +273,17 @@ public class ClientWindow implements ActionListener {
 		// options[random.nextInt(4)].setEnabled(true);
 		// TILL HERE ***
 
+	}
+	private void resetTimer(int duration){
+		if(clock != null){
+			clock.cancel();
+		}
+		clock = new TimerCode(duration);
+		Timer t = new Timer();
+		t.schedule(clock, 0, 1000);
+		timer.setForeground(Color.black);
+		timer.setText(duration + "");
+		window.repaint();
 	}
 
 	// this class is responsible for running the timer on the window
