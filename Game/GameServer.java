@@ -17,9 +17,9 @@ public class GameServer {
     // instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private HashMap<String, Integer> clients = new HashMap<String, Integer>(); // clientID ("[ip]:[port]") and current score
+    private ConcurrentHashMap<String, Integer> clients = new ConcurrentHashMap<String, Integer>(); // clientID ("[ip]:[port]") and current score
     private int questionNumber = 0;
-    private boolean shutdownFlag, timerEndedFlag, nextQuestionFlag;
+    private volatile boolean shutdownFlag, timerEndedFlag, nextQuestionFlag;
 
     // constructor method
     public GameServer() {
@@ -139,10 +139,11 @@ public class GameServer {
                 if (gs.timerEndedFlag) {
                     //run on one thread at a time
                     synchronized (gs.buzzerQueue) {
+                        String firstBuzzer = gs.buzzerQueue.peek();
                         System.out.println("DEBUG TIMER ENDED CLIENT THREAD");
 
                         //check top of buzzer queue against current clientID of current clientThread
-                        if (gs.buzzerQueue.peek().equals(clientID)) {
+                        if (firstBuzzer != null && firstBuzzer.equals(clientID)) {
                             System.out.println("DEBUG: " + clientID + " was first in queue!");
 
                             //send ack message to winner
@@ -243,29 +244,30 @@ public class GameServer {
 
             try {
                 buzzerSocket.receive(incomingPacket);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
+                // Deserialize the packet
+                BuzzerProtocol receivedPacket = null;
+                try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(incomingPacket.getData());
+                     ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
+                    receivedPacket = (BuzzerProtocol) objectInputStream.readObject();
+                }
+                String buzzID = incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort();
+                
+                // add replies to queue in order received
+                // queue is then handled in seperate thread clientThreads
+                gs.buzzerQueue.add(buzzID);
+                System.out.println("UDP buzz received from " + buzzID);
+
+                
+            } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
-
-            // deserialize received packet
-            BuzzerProtocol receivedPacket = null;
-            try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(incomingPacket.getData());
-                    ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
-                receivedPacket = (BuzzerProtocol) objectInputStream.readObject();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-
-            // add replies to queue in order received
-            gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); //uses deserialized receivedPacket to get TCP port num
-
-            // queue is then handled in seperate thread clientThreads
         }
     }
+    
+    // // add replies to queue in order received
+    // gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); //uses deserialized receivedPacket to get TCP port num
 
+    // // queue is then handled in seperate thread clientThreads
     // main
     public static void main(String args[]) { // hi zak (and not fahim) - jjguy
         // print start message
@@ -283,9 +285,13 @@ public class GameServer {
         gs.executorService.submit(() -> gs.listenThread());
 
         // gameplay loop
-        while (gs.questionNumber <= 20) {
-            // if there is more than one client, begin game
+        while (gs.questionNumber < questions.length) {
             if (gs.clients.size() > 0) {
+
+            // for (String clientId : gs.clients.keySet()) {
+            //     System.out.println(clientId);
+            // }
+            // if there is more than one client, begin game
                 try {
                     System.out.println("DEBUG: Starting question " + (gs.questionNumber + 1) + " out of 20");
 
