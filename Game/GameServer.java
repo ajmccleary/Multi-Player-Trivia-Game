@@ -23,6 +23,7 @@ public class GameServer {
     private int questionNumber = 0;
     private volatile boolean shutdownFlag, timerEndedFlag, nextQuestionFlag;
     boolean negativeAckSent = false;
+    boolean timerEndedProcessed = false;
 
     // constructor method
     public GameServer() {
@@ -121,9 +122,13 @@ public class GameServer {
             while (!gs.shutdownFlag) {
 
                 // Send each question and its options to the client
-                if (nextQuestionFlag) {
+                if (gs.nextQuestionFlag) {
                     negativeAckSent = false;
+                    
+                    timerEndedProcessed = false;
 
+                    int pollDuration = 15;
+                    
                     int questionDuration = 20;
 
                     StringBuilder questionData = new StringBuilder(questions[gs.questionNumber]);
@@ -131,6 +136,8 @@ public class GameServer {
 
                         questionData.append(" ; ").append(options.get(j + (gs.questionNumber * 4)));
                     }
+                    questionData.append(" ; ").append(pollDuration);
+                    questionData.append("\n");
                     questionData.append(" ; ").append(questionDuration);
                     questionData.append("\n");
                     // Sends the questions and options to the client
@@ -142,15 +149,20 @@ public class GameServer {
                     String scoreMessage = "Score: " + clients.get(clientID) + "\n";
                     out.write(scoreMessage.getBytes());
                     out.flush();
+                    System.out.println("Sending questions: " + questionData.toString());
 
                     // wait to allow other threads to register nextQuestionFlag before setting it
                     // back to false
                     Thread.sleep(1500);
+                    
+                    // Reset question state 
+                    gs.buzzerQueue.clear();
+
                     nextQuestionFlag = false;
                 }
 
                 // if question timer ends
-                if (gs.timerEndedFlag) {
+                if (gs.timerEndedFlag && !timerEndedProcessed) {
                     // run on one thread at a time
                     synchronized (gs.buzzerQueue) {
                         String firstBuzzer = gs.buzzerQueue.peek();
@@ -229,6 +241,8 @@ public class GameServer {
                                 negativeAckSent = true;
                             }
                         }
+
+                        timerEndedProcessed = true;
                     }
                 }
                 Thread.sleep(50);
@@ -318,15 +332,27 @@ public class GameServer {
                     System.out.println("DEBUG: Starting question " + (gs.questionNumber + 1) + " out of 20");
 
                     // timer for 20 seconds
-                    Thread.sleep(20000);
+                    Thread.sleep(15000);
 
                     // when timer ends, set flag to true
                     gs.timerEndedFlag = true;
 
-                    // pause until next question signal sent
-                    while (!gs.nextQuestionFlag) {
-                        Thread.sleep(100);
+                    // force next question
+                    if(gs.buzzerQueue.isEmpty()){
+                        System.out.println("DEBUG: No buzz received");
+
+                        gs.nextQuestionFlag = true;
+                        gs.timerEndedFlag = false;
+                        gs.questionNumber++;
+                        gs.buzzerQueue.clear();
+                    } else{
+
+                        // pause until next question signal sent
+                        while (!gs.nextQuestionFlag) {
+                            Thread.sleep(100);
+                        }
                     }
+
 
                 } catch (InterruptedException e) {
                     e.printStackTrace();

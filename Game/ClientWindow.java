@@ -177,9 +177,11 @@ public class ClientWindow implements ActionListener {
 							question.setText(parts[0]);	// Set the questions
 							for(int i = 0; i < options.length; i++){
 								options[i].setText(parts[i + 1]);	// Set the options
-								options[i].setEnabled(true);	// Enable the options
+								options[i].setEnabled(false);	// Disable the options
 							}
 							submit.setEnabled(false);	//Initially disable  the submit button
+							
+							
 							poll.setEnabled(true);
 
 							//Parse the timer duration sent from the server 
@@ -232,7 +234,7 @@ public class ClientWindow implements ActionListener {
 				ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)){ //initialize objectOutput Stream to byteArrayOutputStream)
 					
 					//initialize buzz packet
-					BuzzerProtocol buzzPacket = new BuzzerProtocol(socket.getLocalPort());
+					BuzzerProtocol buzzPacket = new BuzzerProtocol(socket.getLocalPort(), questionNumber);
 
 					//write protocol packet to byte array output stream
                     try {
@@ -270,6 +272,7 @@ public class ClientWindow implements ActionListener {
 						out.flush();
 						System.out.println("Answer submitted: " + this.answer);
 						submit.setEnabled(false);
+						
 
 					} else{
 						System.out.println("No option selected");
