@@ -166,8 +166,14 @@ public class ClientWindow implements ActionListener {
 					}
 				} else if (line.equals("end")) {
 					JOptionPane.showMessageDialog(window, "Game Over! Your score is: " + this.scoreValue);
+					
 					System.exit(0);
-				} else {
+				}else if(line.startsWith("Winner: ")){
+					JOptionPane.showMessageDialog(window, line);
+					System.exit(0);
+				}
+				
+				else {
 
 					//Parse the question and options
 					String[] parts = line.split(" ; ");
