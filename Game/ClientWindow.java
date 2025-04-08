@@ -150,6 +150,8 @@ public class ClientWindow implements ActionListener {
 					this.questionNumber++;
 					//display question number?
 
+				} else if (line.equals("remove")){
+					System.exit(0);
 				} else if (line.equals("no-response")) {
 					this.scoreValue -= 20; // Decrement score by 20 for no response
 					SwingUtilities.invokeLater(() -> {

@@ -150,6 +150,18 @@ public class GameServer {
                     out.flush();
                     System.out.println("Sending questions: " + questionData.toString());
 
+                    killSwitch.put(clientID, killSwitch.get(clientID) + 1);
+                    if (killSwitch.get(clientID) > 3) {
+                        // send kill switch message to client
+                        out.write("remove\n".getBytes());
+                        out.flush();
+                        // remove client from clients map
+                        clients.remove(clientID);
+                        // remove client from kill switch map
+                        killSwitch.remove(clientID);
+                    } 
+
+                    System.out.println("DEBUG: Kill switch for client " + clientID + ": " + killSwitch.get(clientID));
                     // wait to allow other threads to register nextQuestionFlag before setting it
                     // back to false
                     Thread.sleep(1500);
