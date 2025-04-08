@@ -142,10 +142,7 @@ public class GameServer {
                     out.write(questionData.toString().getBytes());
                     out.flush();
 
-                    // Send the score to each individual client
-                    String scoreMessage = "Score: " + clients.get(clientID) + "\n";
-                    out.write(scoreMessage.getBytes());
-                    out.flush();
+                    // for DEBUGGING purposes
                     System.out.println("Sending questions: " + questionData.toString());
 
                     // wait to allow other threads to register nextQuestionFlag before setting it
@@ -333,12 +330,6 @@ public class GameServer {
         }
     }
 
-    // // add replies to queue in order received
-    // gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" +
-    // receivedPacket.getPort()); //uses deserialized receivedPacket to get TCP port
-    // num
-
-    // // queue is then handled in seperate thread clientThreads
     // main
     public static void main(String args[]) { // hi zak (and not fahim) - jjguy
         // print start message
@@ -348,7 +339,7 @@ public class GameServer {
         GameServer.gs = new GameServer();
 
         // initialize thread pool
-        gs.executorService = Executors.newFixedThreadPool(10); // DEV do math for this at some point
+        gs.executorService = Executors.newFixedThreadPool(10); //enough threads for 8 potential players
 
         // run threads
         gs.executorService.submit(() -> gs.UDPThread());
