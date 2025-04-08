@@ -2,7 +2,6 @@ package Game;
 
 import java.io.*;
 import java.net.*;
-import java.util.Map.Entry;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -18,19 +17,12 @@ public class GameServer {
     // instance variables
     private ExecutorService executorService;
     private ConcurrentLinkedQueue<String> buzzerQueue = new ConcurrentLinkedQueue<String>();
-    private ConcurrentHashMap<String, Integer> clients = new ConcurrentHashMap<String, Integer>(); // clientID,
-                                                                                                   // ("[ip]:[port]"),
-                                                                                                   // and current score
+    private ConcurrentHashMap<String, Integer> clients = new ConcurrentHashMap<String, Integer>(); // clientID, ("[ip]:[port]"), and current score
     private ConcurrentHashMap<String, OutputStream> clientOutputStreams = new ConcurrentHashMap<>();
     private volatile int questionNumber = 0;
     private volatile boolean shutdownFlag, timerEndedFlag, nextQuestionFlag, questionSentFlag;
     private boolean negativeAckSent = false;
-    private ConcurrentHashMap<String, Integer> killSwitch = new ConcurrentHashMap<String, Integer>(); // clientID
-                                                                                                      // ("[ip]:[port]")
-                                                                                                      // and number of
-                                                                                                      // times client
-                                                                                                      // has not polled
-                                                                                                      // in a row
+    private ConcurrentHashMap<String, Integer> killSwitch = new ConcurrentHashMap<String, Integer>(); // clientID ("[ip]:[port]") and number of times client has not polled in a row
 
     // constructor method
     public GameServer() {
@@ -105,13 +97,9 @@ public class GameServer {
                 // receive prcoess and store data from client attempting to connect
                 Socket clientSocket = gameSocket.accept();
 
-                // create a new thread with the client's information to send questions to client
+                // create a new thread with the client's information to send messages to client
                 gs.executorService.submit(() -> gs.clientThread(clientSocket));
-                killSwitch.put(clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort(), 0); // initialize
-                                                                                                                  // kill
-                                                                                                                  // switch
-                                                                                                                  // for
-                                                                                                                  // client
+
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -127,29 +115,66 @@ public class GameServer {
         // initialize score to 0 (value) and tie to clientID (key)
         clients.put(clientID, 0);
 
+        //initialize kill switch for client
+        killSwitch.put(clientID, 0);
+
         System.out.println("DEBUG: Client thread started: " + clientID);
 
-        // periodically blast question and question data to client
-        try {
+        // stall until next question is being sent to clients OR handle joining mid question
+        while (true) {
+            synchronized (gs) {
+                if (gs.nextQuestionFlag || !gs.questionSentFlag) break;
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
 
-            OutputStream out = clientSocket.getOutputStream();
+        System.out.println("DEBUG: Client thread READY: " + clientID);
+
+        // local variable to track sent question flag
+        boolean localQuestionSentFlag = false;
+
+        // periodically blast question and question data to client
+        try (OutputStream out = clientSocket.getOutputStream();
+        InputStream in = clientSocket.getInputStream();){
+            // add clients output stream to map of client output streams - DEV why?
             clientOutputStreams.put(clientID, out);
-            InputStream in = clientSocket.getInputStream();
+
             while (!gs.shutdownFlag) {
+                // update local next question flag to false to allow for next question to be sent
+                if (!gs.questionSentFlag) {
+                    // reset the localQuestionSentFlag to false
+                    localQuestionSentFlag = false;
+
+                    // wait for other threads to finish processing
+                    Thread.sleep(1000);
+
+                    //only one thread should run this
+                    if (!gs.questionSentFlag)
+                        // set global question sent flag to true to indicate local variable is reset
+                        gs.questionSentFlag = true;
+                }
 
                 // run on one thread at a time
-                synchronized (gs) {
-                    // if question sent flag is set to false
-                    if (!gs.questionSentFlag) {
+                synchronized (gs) {                   
+                    //if local question sent flag is set to false
+                    if(!localQuestionSentFlag) {
+                        //send "next" message to client to indicate next question is coming
+                        out.write("next\n".getBytes());
+
                         negativeAckSent = false;
 
                         int pollDuration = 15;
-
+                        
                         int questionDuration = 20;
 
                         StringBuilder questionData = new StringBuilder(questions[gs.questionNumber]);
                         for (int j = 0; j < 4; j++) {
-                            
+
                             questionData.append(" ; ").append(options.get(j + (gs.questionNumber * 4)));
                         }
                         questionData.append(" ; ").append(pollDuration);
@@ -159,43 +184,18 @@ public class GameServer {
                         // Sends the questions and options to the client
                         out.write(questionData.toString().getBytes());
                         out.flush();
-                        // Send the score to each individual client
-                        String scoreMessage = "Score: " + clients.get(clientID) + "\n";
-                        out.write(scoreMessage.getBytes());
-                        out.flush();
-                        System.out.println("Sending questions: " + questionData.toString());
-                        killSwitch.put(clientID, killSwitch.get(clientID) + 1);
-                        if (killSwitch.get(clientID) > 3) {
-                            // send kill switch message to client
-                            out.write("remove\n".getBytes());
-                            out.flush();
-                            // remove client from clients map
-                            clients.remove(clientID);
-                            // remove client from kill switch map
-                            killSwitch.remove(clientID);
-                        }
 
-                        System.out
-                                .println("DEBUG: Kill switch for client " + clientID + ": " + killSwitch.get(clientID));
-                        // wait to allow other threads to register nextQuestionFlag before setting it
-                        // back to false
+                        // for DEBUGGING purposes
+                        System.out.println("Sending questions to " + clientID);
+
+                        // wait to allow other threads to register nextQuestionFlag before setting it back to false - DEV does this do anything
                         Thread.sleep(1500);
 
-                        // Reset question state
-                        gs.buzzerQueue.clear();
+                        //mark questions as having been sent
+                        localQuestionSentFlag = true;
 
-                        // wait to allow other threads to register nextQuestionFlag before setting it
-                        // back to false
-                        Thread.sleep(1500);
-
-                        // Reset question state
-                        gs.buzzerQueue.clear();
-
-                        // mark questions as having been sent
-                        gs.questionSentFlag = true;
-
-                        // reset next question flag
-                        nextQuestionFlag = false;
+                        //reset next question flag
+                        gs.nextQuestionFlag = false;
                     }
                 }
 
@@ -215,11 +215,25 @@ public class GameServer {
                             // prevent infinite loop
                             gs.timerEndedFlag = false;
 
+                            //kill switch logic - DEV technically still not implemented correctly as we need to handle when just one client has no response
+                            killSwitch.put(clientID, killSwitch.get(clientID) + 1);
+                            if (killSwitch.get(clientID) > 3) {
+                                // send kill switch message to client
+                                out.write("remove\n".getBytes());
+                                out.flush();
+                                // remove client from clients map
+                                clients.remove(clientID);
+                                // remove client from kill switch map
+                                killSwitch.remove(clientID);
+                            }
+
+                        System.out.println("DEBUG: Kill switch for client " + clientID + ": " + killSwitch.get(clientID));
+
                             // move on to next iteration of loop
                             continue;
 
-                            // check top of buzzer queue against current clientID of current clientThread
-                        } else if (gs.buzzerQueue.peek().equals(clientID)) {
+                        //check top of buzzer queue against current clientID of current clientThread
+                        } else if (gs.buzzerQueue.peek().equals(clientID) && !gs.nextQuestionFlag) {
                             System.out.println("DEBUG: " + clientID + " was first in queue!");
 
                             // send ack message to winner
@@ -295,7 +309,7 @@ public class GameServer {
                             }
 
                         } else { // client not on top of queue
-                            if (!negativeAckSent) {
+                            if (!negativeAckSent) { //DEV - do we still need this check?
                                 // send negative ack message
                                 out.write("negative-ack\n".getBytes()); // client now knows it was not first in queue
                                 out.flush();
@@ -358,22 +372,11 @@ public class GameServer {
                     e.printStackTrace();
                 }
 
-                // add replies to queue in order received
-                if (receivedPacket != null) {
-                    gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); // uses
-                                                                                                                       // deserialized
-                                                                                                                       // receivedPacket
-                                                                                                                       // to
-                                                                                                                       // get
-                                                                                                                       // TCP
-                                                                                                                       // port
-                                                                                                                       // num
-                    killSwitch.put(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort(), 0); // initialize
-                                                                                                                      // kill
-                                                                                                                      // switch
-                                                                                                                      // for
-                                                                                                                      // client
-                }
+                //ensure packet is not null - DEV and is for the current question  && receivedPacket.getQuestionNumber() == gs.questionNumber
+                if (receivedPacket != null)
+                    // add replies to queue in order received
+                    gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort());
+
             } catch (SocketTimeoutException e) {
                 // timeout occurred, continue waiting for packets
                 continue;
@@ -404,21 +407,18 @@ public class GameServer {
 
         // gameplay loop
         while (gs.questionNumber < questions.length) {
+            // if there is more than one client, begin game
             if (gs.clients.size() > 0) {
-
-                // for (String clientId : gs.clients.keySet()) {
-                // System.out.println(clientId);
-                // }
-                // if there is more than one client, begin game
                 try {
-                    System.out.println("DEBUG: Starting question " + (gs.questionNumber + 1) + " out of 20");
+                    System.out.println("\nDEBUG: Starting question " + (gs.questionNumber + 1) + " out of 20");
 
-                    synchronized (gs.buzzerQueue) {
-                        // reset timer flag at start of each question
+                    synchronized (gs) {
+                        //reset flags at start of each question
+                        gs.nextQuestionFlag = true;
                         gs.timerEndedFlag = false;
+                        gs.questionSentFlag = false;
 
-                        // clear buzzer queue at start of each question
-                        System.out.println("DEBUG Clearing Queue");
+                        //clear buzzer queue at start of each question
                         gs.buzzerQueue.clear();
                     }
 
@@ -440,13 +440,8 @@ public class GameServer {
                     }
 
                     synchronized (gs) {
-                        System.out.println("DEBUG Incrementing question number");
-
-                        // increment question number
+                        //increment question number
                         gs.questionNumber++;
-
-                        // reset question sent flag
-                        gs.questionSentFlag = false;
                     }
 
                 } catch (InterruptedException e) {

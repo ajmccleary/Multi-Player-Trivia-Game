@@ -148,7 +148,7 @@ public class ClientWindow implements ActionListener {
 
 				} else if (line.equals("next")) {
 					this.questionNumber++;
-					//display question number?
+					//DEV - display question number?
 
 				} else if (line.equals("remove")){
 					System.exit(0);
@@ -157,7 +157,7 @@ public class ClientWindow implements ActionListener {
 					SwingUtilities.invokeLater(() -> {
 						score.setText("Score: " + this.scoreValue);
 					});
-					
+
 				} else if (line.equals("correct")) {
 					this.scoreValue += 10; // Increment score by 10 for correct answer
 					SwingUtilities.invokeLater(() -> {
