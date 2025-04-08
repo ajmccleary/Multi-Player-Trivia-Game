@@ -172,7 +172,7 @@ public class ClientWindow implements ActionListener {
 					String[] parts = line.split(" ; ");
 					
 					// Ensure the format is correct
-					if(parts.length == 5) {
+					if(parts.length == 6) {
 						SwingUtilities.invokeLater(() -> {
 							question.setText(parts[0]);	// Set the questions
 							for(int i = 0; i < options.length; i++){
@@ -182,8 +182,20 @@ public class ClientWindow implements ActionListener {
 							submit.setEnabled(false);	//Initially disable  the submit button
 							poll.setEnabled(true);
 
-							// Reset the timer for the new question
-							resetTimer(20);
+							//Parse the timer duration sent from the server 
+							int duration = 20;
+
+							try{
+								duration = Integer.parseInt(parts[5].trim());
+							} catch (NumberFormatException e){	//If parsing fails, the default duration remains
+
+							}
+
+							// Reset the tmer with the duration received from the server 
+							resetTimer(duration);
+
+							// // Reset the timer for the new question
+							// resetTimer(20);
 						});
 	
 						System.out.println(parts[0]);
