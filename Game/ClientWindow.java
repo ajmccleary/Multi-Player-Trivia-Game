@@ -149,6 +149,7 @@ public class ClientWindow implements ActionListener {
 				} else if (line.equals("next")) {
 					this.questionNumber++;
 
+				} else if (line.equals("no-response")) {
 
 				} else if (line.equals("correct")) {
 
