@@ -72,6 +72,7 @@ public class ClientWindow implements ActionListener {
 				options[index].setBounds(10, 110 + (index * 20), 350, 20);
 				window.add(options[index]);
 				optionGroup.add(options[index]);
+				options[index].setEnabled(false); // initially disable the options
 			}
 			timer = new JLabel("TIMER"); // represents the countdown shown on the window
 			timer.setBounds(250, 250, 100, 20);
@@ -88,12 +89,14 @@ public class ClientWindow implements ActionListener {
 			poll.setBounds(10, 300, 100, 20);
 			poll.addActionListener(this); // calls actionPerformed of this class
 			window.add(poll);
-
+			poll.setEnabled(false); // initially disable the poll button
+	
 			submit = new JButton("Submit"); // button to submit their answer
 			submit.setBounds(200, 300, 100, 20);
 			submit.addActionListener(this); // calls actionPerformed of this class
 			window.add(submit);
-
+			submit.setEnabled(false); // initially disable the submit button
+	
 			window.setSize(400, 400);
 			window.setBounds(50, 50, 400, 400);
 			window.setLayout(null);
@@ -127,6 +130,8 @@ public class ClientWindow implements ActionListener {
 						}
 						submit.setEnabled(true);
 						poll.setEnabled(false);
+
+						resetTimer(10);
 					});
 					System.out.println("Received ack");
 
@@ -146,8 +151,10 @@ public class ClientWindow implements ActionListener {
 					this.questionNumber++;
 					// DEV - display question number?
 
-				} else if (line.equals("remove")) {
+				} else if (line.equals("remove")){
+					System.out.println("Received remove message. Exiting...");
 					System.exit(0);
+
 				} else if (line.equals("no-response")) {
 					this.scoreValue -= 20; // Decrement score by 20 for no response
 					SwingUtilities.invokeLater(() -> {
