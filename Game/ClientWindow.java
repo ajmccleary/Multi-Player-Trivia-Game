@@ -36,7 +36,7 @@ public class ClientWindow implements ActionListener {
 	private JLabel score;
 	private TimerTask clock;
 	private String answer;
-	private int questionNumber = 0; // to keep track of the question number
+	private int questionNumber = -1; // to keep track of the question number
 	private int scoreValue = 0; // to keep track of the score
 
 	private JFrame window;
@@ -46,14 +46,6 @@ public class ClientWindow implements ActionListener {
 	private PrintWriter out;
 
 	private static SecureRandom random = new SecureRandom();
-
-	// write setters and getters as you need
-
-	// 
-	// Do part c ack is first in queue and negative ack isn't first in queue. If received ack is first in queue and can press the submit button 
-	// Handle signles sent by client thread. search for  .getBytes in Gameserver
-	// Same as listen for questions but don't have split the 
-
 
 	public ClientWindow(String serverAddress, int port) {
 		try{
@@ -74,8 +66,7 @@ public class ClientWindow implements ActionListener {
 			optionGroup = new ButtonGroup();
 			for (int index = 0; index < options.length; index++) {
 				options[index] = new JRadioButton("Option " + (index + 1)); // represents an option
-				// if a radio button is clicked, the event would be thrown to this class to
-				// handle
+				// if a radio button is clicked, the event would be thrown to this class to handle
 				options[index].addActionListener(this);
 				options[index].setBounds(10, 110 + (index * 20), 350, 20);
 				window.add(options[index]);
@@ -148,7 +139,7 @@ public class ClientWindow implements ActionListener {
 
 				} else if (line.equals("next")) {
 					this.questionNumber++;
-					//display question number?
+					//DEV - display question number?
 
 				} else if (line.equals("remove")){
 					System.exit(0);
@@ -157,7 +148,7 @@ public class ClientWindow implements ActionListener {
 					SwingUtilities.invokeLater(() -> {
 						score.setText("Score: " + this.scoreValue);
 					});
-					
+
 				} else if (line.equals("correct")) {
 					this.scoreValue += 10; // Increment score by 10 for correct answer
 					SwingUtilities.invokeLater(() -> {
@@ -165,16 +156,11 @@ public class ClientWindow implements ActionListener {
 					});
 
 				} else if (line.equals("wrong")) {
+					this.scoreValue -= 10; // Decrement score by 10 for correct answer
+					SwingUtilities.invokeLater(() -> {
+						score.setText("Score: " + this.scoreValue);
+					});
 
-				} else if (line.startsWith("Score:")){
-					//Update the score label
-					String[] parts = line.split(": ");
-					if(parts.length == 2){
-						this.scoreValue = Integer.parseInt(parts[1]);
-						SwingUtilities.invokeLater(() -> {
-							score.setText("Score: " + this.scoreValue);
-						});
-					}
 				} else if (line.equals("end")) {
 					JOptionPane.showMessageDialog(window, "Game Over! Your score is: " + this.scoreValue);
 					
@@ -213,9 +199,6 @@ public class ClientWindow implements ActionListener {
 
 							// Reset the tmer with the duration received from the server 
 							resetTimer(duration);
-
-							// // Reset the timer for the new question
-							// resetTimer(20);
 						});
 	
 						System.out.println(parts[0]);
@@ -231,8 +214,6 @@ public class ClientWindow implements ActionListener {
 	// this method is called when you press either of the buttons- submit/poll
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		System.out.println("You clicked " + e.getActionCommand());
-
 		// input refers to the radio button you selected or button you clicked
 		String input = e.getActionCommand();
 		File file = new File("ipConfig.txt");
@@ -240,7 +221,6 @@ public class ClientWindow implements ActionListener {
 		try {
 			fileScanner = new Scanner(file);
 		} catch (FileNotFoundException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		String[] parts = fileScanner.nextLine().split(" "); // read the first line and split by whitespace
@@ -271,7 +251,9 @@ public class ClientWindow implements ActionListener {
 					//send packet via socket
 					socket.send(packet);
 
+					//print the buzz message to the console
 					System.out.println( "Buzz pressed, sending message to server...");
+
 					//close UDP socket
 					socket.close();
 				} catch (SocketException socketException) {
@@ -312,25 +294,8 @@ public class ClientWindow implements ActionListener {
 					this.answer = "d";
 				}
 		}
-
-		// test code below to demo enable/disable components
-		// DELETE THE CODE BELOW FROM HERE***
-		// if (poll.isEnabled()) {
-		// 	poll.setEnabled(false);
-		// 	submit.setEnabled(true);
-		// } else {
-		// 	poll.setEnabled(true);
-		// 	submit.setEnabled(false);
-		// }
-
-		//question.setText("Q2. This is another test problem " + random.nextInt());
-
-		// you can also enable disable radio buttons
-		// options[random.nextInt(4)].setEnabled(false);
-		// options[random.nextInt(4)].setEnabled(true);
-		// TILL HERE ***
-
 	}
+
 	private void resetTimer(int duration){
 		if(clock != null){
 			clock.cancel();
@@ -371,5 +336,4 @@ public class ClientWindow implements ActionListener {
 			window.repaint();
 		}
 	}
-
 }

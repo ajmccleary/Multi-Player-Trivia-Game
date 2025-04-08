@@ -17,7 +17,11 @@ public class BuzzerProtocol implements Serializable {
     }
 
     public int getPort() {
-        return TCP_PORT;
+        return this.TCP_PORT;
+    }
+
+    public Instant getTimeSent() {
+        return this.timeSent;
     }
 
     public int getQuestionNumber(){
