@@ -2,6 +2,7 @@ package Game;
 
 import java.io.*;
 import java.net.*;
+import java.util.Map.Entry;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -21,6 +22,7 @@ public class GameServer {
     private volatile int questionNumber = 0;
     private volatile boolean shutdownFlag, timerEndedFlag, nextQuestionFlag, questionSentFlag;
     private boolean negativeAckSent = false;
+    private ConcurrentHashMap<String, Integer> killSwitch = new ConcurrentHashMap<String, Integer>(); // clientID ("[ip]:[port]") and number of times client has not polled in a row
 
     // constructor method
     public GameServer() {
@@ -97,6 +99,7 @@ public class GameServer {
 
                 // create a new thread with the client's information to send questions to client
                 gs.executorService.submit(() -> gs.clientThread(clientSocket));
+                killSwitch.put(clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort(), 0); //initialize kill switch for client
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -131,7 +134,6 @@ public class GameServer {
 
                     StringBuilder questionData = new StringBuilder(questions[gs.questionNumber]);
                     for (int j = 0; j < 4; j++) {
-
                         questionData.append(" ; ").append(options.get(j + (gs.questionNumber * 4)));
                     }
                     questionData.append(" ; ").append(pollDuration);
@@ -142,7 +144,10 @@ public class GameServer {
                     out.write(questionData.toString().getBytes());
                     out.flush();
 
-                    // for DEBUGGING purposes
+                    // Send the score to each individual client
+                    String scoreMessage = "Score: " + clients.get(clientID) + "\n";
+                    out.write(scoreMessage.getBytes());
+                    out.flush();
                     System.out.println("Sending questions: " + questionData.toString());
 
                     // wait to allow other threads to register nextQuestionFlag before setting it
@@ -316,8 +321,10 @@ public class GameServer {
                 }
 
                 // add replies to queue in order received
-                if (receivedPacket != null)
+                if (receivedPacket != null){
                     gs.buzzerQueue.add(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort()); //uses deserialized receivedPacket to get TCP port num
+                    killSwitch.put(incomingPacket.getAddress().getHostAddress() + ":" + receivedPacket.getPort(), 0); //initialize kill switch for client
+                }
             } catch  (SocketTimeoutException e) {
                 // timeout occurred, continue waiting for packets
                 continue;
