@@ -148,10 +148,21 @@ public class ClientWindow implements ActionListener {
 
 				} else if (line.equals("next")) {
 					this.questionNumber++;
+					//display question number?
 
+				} else if (line.equals("remove")){
+					System.exit(0);
 				} else if (line.equals("no-response")) {
-
+					this.scoreValue -= 20; // Decrement score by 20 for no response
+					SwingUtilities.invokeLater(() -> {
+						score.setText("Score: " + this.scoreValue);
+					});
+					
 				} else if (line.equals("correct")) {
+					this.scoreValue += 10; // Increment score by 10 for correct answer
+					SwingUtilities.invokeLater(() -> {
+						score.setText("Score: " + this.scoreValue);
+					});
 
 				} else if (line.equals("wrong")) {
 
