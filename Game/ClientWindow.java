@@ -48,25 +48,26 @@ public class ClientWindow implements ActionListener {
 	private static SecureRandom random = new SecureRandom();
 
 	public ClientWindow(String serverAddress, int port) {
-		try{
+		try {
 
-			//Connect to the server 
+			// Connect to the server
 			socket = new Socket(InetAddress.getByName(serverAddress), port);
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			out = new PrintWriter(socket.getOutputStream(), true);
 
 			JOptionPane.showMessageDialog(window, "This is a trivia game");
-	
+
 			window = new JFrame("Trivia");
 			question = new JLabel("Waiting for the first question"); // represents the question
 			window.add(question);
 			question.setBounds(10, 5, 350, 100);
-	
+
 			options = new JRadioButton[4];
 			optionGroup = new ButtonGroup();
 			for (int index = 0; index < options.length; index++) {
 				options[index] = new JRadioButton("Option " + (index + 1)); // represents an option
-				// if a radio button is clicked, the event would be thrown to this class to handle
+				// if a radio button is clicked, the event would be thrown to this class to
+				// handle
 				options[index].addActionListener(this);
 				options[index].setBounds(10, 110 + (index * 20), 350, 20);
 				window.add(options[index]);
@@ -78,21 +79,21 @@ public class ClientWindow implements ActionListener {
 			Timer t = new Timer(); // event generator
 			t.schedule(clock, 0, 1000); // clock is called every second
 			window.add(timer);
-	
+
 			score = new JLabel("SCORE"); // represents the score
 			score.setBounds(50, 250, 100, 20);
 			window.add(score);
-	
+
 			poll = new JButton("Poll"); // button that use clicks/ like a buzzer
 			poll.setBounds(10, 300, 100, 20);
 			poll.addActionListener(this); // calls actionPerformed of this class
 			window.add(poll);
-	
+
 			submit = new JButton("Submit"); // button to submit their answer
 			submit.setBounds(200, 300, 100, 20);
 			submit.addActionListener(this); // calls actionPerformed of this class
 			window.add(submit);
-	
+
 			window.setSize(400, 400);
 			window.setBounds(50, 50, 400, 400);
 			window.setLayout(null);
@@ -100,24 +101,28 @@ public class ClientWindow implements ActionListener {
 			window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			window.setResizable(false);
 
-			//Start listening for questions from the server
-			new Thread(this :: listenForMessage).start();
+			// Start listening for questions from the server
+			new Thread(this::listenForMessage).start();
 
-
-		} catch(IOException e ){
-			JOptionPane.showMessageDialog(null, "Error connecting to Server: "  + e.getMessage());
+		} catch (IOException e) {
+			JOptionPane.showMessageDialog(null, "Error connecting to Server: " + e.getMessage());
 		}
 	}
 
-	private void listenForMessage(){
-		try{
+	private void listenForMessage() {
+		try {
 			String line;
-			while((line = in.readLine()) != null){
-				if(line.equals("ack")){
+			while ((line = in.readLine()) != null) {
 
-					//Enable options and submit button
+				if (line.startsWith("Your ID : ")) {
+					String playerName = line.substring(9);
+					JOptionPane.showMessageDialog(window, "Player:" + playerName);
+					System.out.println("Assigned Player Name: " + playerName);
+				} else if (line.equals("ack")) {
+
+					// Enable options and submit button
 					SwingUtilities.invokeLater(() -> {
-						for(JRadioButton option : options){
+						for (JRadioButton option : options) {
 							option.setEnabled(true);
 						}
 						submit.setEnabled(true);
@@ -125,11 +130,11 @@ public class ClientWindow implements ActionListener {
 					});
 					System.out.println("Received ack");
 
-				} else if(line.equals("negative-ack")){
-					
-					//Disable options and submit button
+				} else if (line.equals("negative-ack")) {
+
+					// Disable options and submit button
 					SwingUtilities.invokeLater(() -> {
-						for(JRadioButton option : options){
+						for (JRadioButton option : options) {
 							option.setEnabled(false);
 						}
 						submit.setEnabled(false);
@@ -139,9 +144,9 @@ public class ClientWindow implements ActionListener {
 
 				} else if (line.equals("next")) {
 					this.questionNumber++;
-					//DEV - display question number?
+					// DEV - display question number?
 
-				} else if (line.equals("remove")){
+				} else if (line.equals("remove")) {
 					System.exit(0);
 				} else if (line.equals("no-response")) {
 					this.scoreValue -= 20; // Decrement score by 20 for no response
@@ -163,49 +168,48 @@ public class ClientWindow implements ActionListener {
 
 				} else if (line.equals("end")) {
 					JOptionPane.showMessageDialog(window, "Game Over! Your score is: " + this.scoreValue);
-					
+
 					System.exit(0);
-				}else if(line.startsWith("Winner: ")){
+				} else if (line.startsWith("Winner: ")) {
 					JOptionPane.showMessageDialog(window, line);
 					System.exit(0);
 				}
-				
+
 				else {
 
-					//Parse the question and options
+					// Parse the question and options
 					String[] parts = line.split(" ; ");
-					
+
 					// Ensure the format is correct
-					if(parts.length == 6) {
+					if (parts.length == 6) {
 						SwingUtilities.invokeLater(() -> {
-							question.setText(parts[0]);	// Set the questions
-							for(int i = 0; i < options.length; i++){
-								options[i].setText(parts[i + 1]);	// Set the options
-								options[i].setEnabled(false);	// Disable the options
+							question.setText(parts[0]); // Set the questions
+							for (int i = 0; i < options.length; i++) {
+								options[i].setText(parts[i + 1]); // Set the options
+								options[i].setEnabled(false); // Disable the options
 							}
-							submit.setEnabled(false);	//Initially disable  the submit button
-							
-							
+							submit.setEnabled(false); // Initially disable the submit button
+
 							poll.setEnabled(true);
 
-							//Parse the timer duration sent from the server 
+							// Parse the timer duration sent from the server
 							int duration = 20;
 
-							try{
+							try {
 								duration = Integer.parseInt(parts[5].trim());
-							} catch (NumberFormatException e){	//If parsing fails, the default duration remains
+							} catch (NumberFormatException e) { // If parsing fails, the default duration remains
 
 							}
 
-							// Reset the tmer with the duration received from the server 
+							// Reset the tmer with the duration received from the server
 							resetTimer(duration);
 						});
-	
+
 						System.out.println(parts[0]);
 					}
 				}
 			}
-		} catch (IOException e){
+		} catch (IOException e) {
 			JOptionPane.showMessageDialog(null, "Error receiving data from the server:" + e.getMessage());
 		}
 	}
@@ -224,37 +228,43 @@ public class ClientWindow implements ActionListener {
 			e1.printStackTrace();
 		}
 		String[] parts = fileScanner.nextLine().split(" "); // read the first line and split by whitespace
-		String serverIP = parts[0]; 
-		int serverPort = Integer.parseInt(parts[1]) - 1; 
-		switch (input) { //need to find a way to identify which option was selected
+		String serverIP = parts[0];
+		int serverPort = Integer.parseInt(parts[1]) - 1;
+		switch (input) { // need to find a way to identify which option was selected
 			case "Poll":
-				try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); //initialize byteArrayOutputStream
-				ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)){ //initialize objectOutput Stream to byteArrayOutputStream)
-					
-					//initialize buzz packet
+				try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(); // initialize
+																								// byteArrayOutputStream
+						ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)) { // initialize
+																													// objectOutput
+																													// Stream
+																													// to
+																													// byteArrayOutputStream)
+
+					// initialize buzz packet
 					BuzzerProtocol buzzPacket = new BuzzerProtocol(socket.getLocalPort(), questionNumber);
 
-					//write protocol packet to byte array output stream
-                    try {
-                        objectOutputStream.writeObject(buzzPacket);
-                    } catch (IOException IOE) {
+					// write protocol packet to byte array output stream
+					try {
+						objectOutputStream.writeObject(buzzPacket);
+					} catch (IOException IOE) {
 						IOE.printStackTrace();
 					}
 
-					//convert to byte array
+					// convert to byte array
 					byte[] data = byteArrayOutputStream.toByteArray();
 
-					//create UDP socket and packet
+					// create UDP socket and packet
 					DatagramSocket socket = new DatagramSocket();
-					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), serverPort);
-					
-					//send packet via socket
+					DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP),
+							serverPort);
+
+					// send packet via socket
 					socket.send(packet);
 
-					//print the buzz message to the console
-					System.out.println( "Buzz pressed, sending message to server...");
+					// print the buzz message to the console
+					System.out.println("Buzz pressed, sending message to server...");
 
-					//close UDP socket
+					// close UDP socket
 					socket.close();
 				} catch (SocketException socketException) {
 					System.out.println("Error in creating DatagramSocket: " + socketException.getMessage());
@@ -264,26 +274,25 @@ public class ClientWindow implements ActionListener {
 				}
 				break;
 
-			case "Submit": 
-				//send selected answeer this.answewe to server
-				try{
-					if(answer != null){
+			case "Submit":
+				// send selected answeer this.answewe to server
+				try {
+					if (answer != null) {
 						out.print(this.answer);
 						out.flush();
 						System.out.println("Answer submitted: " + this.answer);
 						submit.setEnabled(false);
-						
 
-					} else{
+					} else {
 						System.out.println("No option selected");
 					}
-				} catch (Exception e1){
+				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
 				break;
 
 			default:
-				//handle option selected
+				// handle option selected
 				if (input.equals(options[0].getText())) {
 					this.answer = "a";
 				} else if (input.equals(options[1].getText())) {
@@ -296,8 +305,8 @@ public class ClientWindow implements ActionListener {
 		}
 	}
 
-	private void resetTimer(int duration){
-		if(clock != null){
+	private void resetTimer(int duration) {
+		if (clock != null) {
 			clock.cancel();
 		}
 		clock = new TimerCode(duration);

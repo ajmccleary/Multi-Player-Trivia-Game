@@ -24,6 +24,8 @@ public class GameServer {
     private volatile boolean shutdownFlag, timerEndedFlag, nextQuestionFlag, questionSentFlag;
     private boolean negativeAckSent = false;
     private ConcurrentHashMap<String, Integer> killSwitch = new ConcurrentHashMap<String, Integer>(); // clientID ("[ip]:[port]") and number of times client has not polled in a row
+    private static ConcurrentHashMap<String , String> clientNames = new ConcurrentHashMap<>();  // Map clientID to player name 
+    private static int clientCounter = 0;   //Counter for assignig client
 
     //static helper class to hold buzzer data
     private static class BuzzerEntry implements Comparable<BuzzerEntry> {
@@ -143,8 +145,12 @@ public class GameServer {
 
     // send question thread method (uses TCP)
     public void clientThread(Socket clientSocket) {
+        String playerName = " Player " + (++clientCounter);
         // store clientID as "[ip]:[port]"
         String clientID = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+
+        //Map the clientID to the player name 
+        clientNames.put(clientID, playerName);
 
         // initialize score to 0 (value) and tie to clientID (key)
         clients.put(clientID, 0);
@@ -152,7 +158,7 @@ public class GameServer {
         //initialize kill switch for client
         killSwitch.put(clientID, 0);
 
-        System.out.println("Client thread started: " + clientID);
+        System.out.println("Client thread started: " + playerName  + " (" +  clientID + ")");
 
         // stall until next question is being sent to clients OR handle joining mid question
         while (true) {
@@ -177,6 +183,10 @@ public class GameServer {
         InputStream in = clientSocket.getInputStream();){
             // add clients output stream to map of client output streams
             clientOutputStreams.put(clientID, out);
+
+            //Send the assigned player name to the client
+            out.write(("Your ID: " + playerName + "\n").getBytes());
+            out.flush();
 
             while (!gs.shutdownFlag) {
                 // update local next question flag to false to allow for next question to be sent
@@ -518,9 +528,10 @@ public class GameServer {
                     
                 }
             }
-            
+            // Append player names to the winner message
             for (String winner : winners) {
-                winnerMessage.append(winner).append(" ");
+                String playerName = clientNames.get(winner);
+                winnerMessage.append(playerName).append(" ");
             }
             winnerMessage.append("with a score of ").append(highestScore).append("!");
 
